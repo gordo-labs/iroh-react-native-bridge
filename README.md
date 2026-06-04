@@ -20,7 +20,8 @@ Integration target (later): `mobile` depends on published package or monorepo su
 ## Docs
 
 - [TASK.md](./TASK.md) — scope, phases, acceptance
-- [Music Hub Iroh strategy](../../working/roadmap/future/decentralized-hub-discovery/IROH-MOBILE-BINDINGS.md)
+- [Music Hub Iroh strategy](../working/roadmap/future/decentralized-hub-discovery/IROH-MOBILE-BINDINGS.md)
+- Umbrella checkout: [music-hub-parent](https://github.com/gordo-labs/music-hub-parent) — this directory is `iroh-react-native-bridge/` at the hub root (submodule).
 
 ## License
 

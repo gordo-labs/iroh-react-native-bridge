@@ -1,6 +1,6 @@
 # TASK — Iroh React Native bridge (experimental)
 
-**Area:** `experiments/iroh-react-native-bridge`  
+**Area:** `iroh-react-native-bridge/` (submodule at Music Hub parent root)  
 **Git:** Independent repository (root = this folder).  
 **Parent:** Music Hub — do not block Sovereign alpha merge.  
 **Created:** 2026-06-04
