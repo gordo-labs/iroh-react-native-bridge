@@ -19,6 +19,8 @@ Music Hub Agent 02 documented blockers: [IROH-MOBILE-BINDINGS.md](../../working/
 - `n0-computer/iroh-ffi` → Swift/Kotlin reference, no RN, paused maintenance  
 - Alpha shipped **WebRTC** + Supabase bootstrap instead
 
+**Related (not this repo):** hub↔hub collab over Iroh (desktop) — [IROH-HUB-TO-HUB-COLLAB.md](../working/roadmap/future/decentralized-hub-discovery/IROH-HUB-TO-HUB-COLLAB.md).
+
 ## Non-goals (this repo)
 
 - Music Hub HTTP tunnel / `session.verify` integration  
