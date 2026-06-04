@@ -24,4 +24,4 @@ Integration target (later): `mobile` depends on published package or monorepo su
 
 ## License
 
-TBD — align with Music Hub (MIT) when code lands; Rust deps follow `iroh` / n0 licenses.
+[MIT](./LICENSE) — open source. Rust dependencies follow their respective licenses (`iroh`, n0, etc.) when linked in P1.
