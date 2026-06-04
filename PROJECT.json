@@ -1,0 +1,18 @@
+{
+  "name": "iroh-react-native-bridge",
+  "slug": "iroh-react-native-bridge",
+  "type": "experiment",
+  "status": "planning",
+  "parentProject": "music-streaming-hub",
+  "description": "Standalone React Native / Expo native module for minimal Iroh P2P (UniFFI + Turbo Module).",
+  "repository": {
+    "local": "experiments/iroh-react-native-bridge",
+    "remote": "https://github.com/gordo-labs/iroh-react-native-bridge"
+  },
+  "taskDoc": "TASK.md",
+  "relatedDocs": [
+    "../../working/roadmap/future/decentralized-hub-discovery/IROH-MOBILE-BINDINGS.md",
+    "../../working/roadmap/future/decentralized-hub-discovery/SOVEREIGN-REMOTE-ARCHITECTURE.md",
+    "../sovereign-remote-transport/TRANSPORT-DECISION.md"
+  ]
+}

@@ -1,0 +1,10 @@
+/target/
+**/target/
+node_modules/
+*.xcframework
+*.aar
+*.so
+*.dylib
+.DS_Store
+.env
+.env.*
