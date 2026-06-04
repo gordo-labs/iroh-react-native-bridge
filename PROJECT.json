@@ -11,6 +11,7 @@
     "parentSubmodule": "music-hub-parent"
   },
   "taskDoc": "TASK.md",
+  "workingIndex": "WORKING-INDEX.md",
   "relatedDocs": [
     "../working/roadmap/future/decentralized-hub-discovery/IROH-MOBILE-BINDINGS.md",
     "../working/roadmap/future/decentralized-hub-discovery/SOVEREIGN-REMOTE-ARCHITECTURE.md",
