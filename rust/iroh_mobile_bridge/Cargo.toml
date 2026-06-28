@@ -1,15 +1,18 @@
 [package]
 name = "iroh_mobile_bridge"
-version = "0.0.0"
+version = "0.1.0"
 edition = "2021"
-description = "Minimal Iroh surface for React Native (experiment — not wired to product yet)"
+description = "Minimal Iroh surface for React Native (UniFFI + Turbo Module)"
 license = "MIT"
+authors = ["Gordo Labs"]
 
 [lib]
 crate-type = ["lib", "cdylib", "staticlib"]
-
-# Pin when implementing P1 — match music-streaming-hub desktop spike (@number0/iroh 0.35.x)
-# [dependencies]
-# iroh = "0.35"
+name = "iroh_mobile_bridge"
 
 [dependencies]
+iroh = "1.0"
+tokio = { version = "1", features = ["rt", "macros"] }
+uniffi = { version = "0.31", features = ["cli"] }
+thiserror = "2"
+hex = "0.4"

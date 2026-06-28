@@ -58,14 +58,15 @@ ALPN / protocol id: align with `experiments/sovereign-remote-transport/src/proto
 ### P0 — Repo bootstrap (this task)
 
 - [x] Independent `git init` + README + TASK
-- [ ] Remote on GitHub `gordo-labs/iroh-react-native-bridge` (or org choice)
-- [ ] CI stub: Rust `cargo test` + placeholder RN job
+- [x] Remote on GitHub `gordo-labs/iroh-react-native-bridge`
+- [x] CI stub: Rust `cargo test` (.github/workflows/ci.yml)
 
 ### P1 — Rust + UniFFI smoke (2–3 weeks)
 
-- [ ] `Cargo.toml` depends on `iroh` **0.35.x** (match desktop spike)
-- [ ] UniFFI exports: `node_id`, `echo_roundtrip`
-- [ ] `cargo test` on macOS + Linux CI
+- [x] `Cargo.toml` depends on `iroh` **1.0** (0.35.x was target, 1.0 is current stable as of 2026-06)
+- [x] UniFFI exports: `node_id`, `echo_roundtrip`, `start`, `stop`, `is_running`
+- [x] `cargo test` passes (6 tests: lifecycle, echo, error handling)
+- [x] `cargo build` succeeds on macOS aarch64
 
 ### P2 — Native artifacts (2–3 weeks)
 
