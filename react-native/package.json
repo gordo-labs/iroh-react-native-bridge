@@ -1,0 +1,24 @@
+{
+  "name": "@music-hub/iroh-bridge",
+  "version": "0.1.0",
+  "description": "React Native bridge for Music Hub Iroh transport",
+  "main": "src/index.js",
+  "react-native": "src/index.js",
+  "types": "src/index.d.ts",
+  "files": [
+    "src",
+    "ios",
+    "android",
+    "MusicHubIrohBridge.podspec",
+    "react-native.config.js"
+  ],
+  "keywords": [
+    "react-native",
+    "iroh",
+    "music-hub"
+  ],
+  "license": "MIT",
+  "peerDependencies": {
+    "react-native": ">=0.81"
+  }
+}
