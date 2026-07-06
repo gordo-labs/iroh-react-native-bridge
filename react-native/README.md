@@ -2,22 +2,25 @@
 
 React Native package for the Music Hub Iroh mobile bridge.
 
-This package exposes the native module name `MusicHubIroh` to React Native
-autolinking on iOS and Android. The current implementation is a loadable shell:
-it lets the mobile app detect that the native module is present and returns an
-explicit `iroh_not_linked` error until the Rust Iroh runtime is linked into the
-platform targets.
+This package exposes the `IrohBridge` TurboModule to React Native autolinking
+on iOS and Android. The TurboModule installs the Rust/UniFFI JSI runtime and
+`src/index.js` then calls the generated Rust bindings directly.
+
+`MusicHubIroh` is kept only as a legacy compatibility shell. If the package falls
+back to that module, the app is not running the real Iroh runtime.
 
 Expected mobile behavior:
 
 - `Iroh native bridge is not installed in this mobile build`: the package was
   not included by the app build.
-- `Iroh Rust runtime is not linked into this ... build yet`: the React Native
-  module is present, but the Rust/UniFFI runtime has not been wired yet.
+- `Iroh native bridge runtime is not available` / TurboModule errors: rebuild
+  the native app after `npm install` + `pod install`; ensure the New
+  Architecture/TurboModule path is enabled for this package.
+- `Iroh Rust runtime is not linked into this ... build yet`: the app fell back
+  to the legacy `MusicHubIroh` shell instead of loading `IrohBridge`.
 
-Next native step:
+Local development:
 
-1. Build the Rust crate as iOS and Android artifacts.
-2. Generate UniFFI Swift and Kotlin bindings.
-3. Replace the shell `start`, `nodeId`, `connect`, `send`, `close`, and `stop`
-   implementations with calls into the Rust runtime.
+1. Build Rust artifacts with `npm run ubrn:ios` or `npm run ubrn:android`.
+2. In the mobile app, use `music-hub-iroh-bridge: file:../iroh-react-native-bridge/react-native`.
+3. Re-run `npm install`, iOS pods, and rebuild the native app.

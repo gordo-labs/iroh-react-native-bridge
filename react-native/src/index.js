@@ -149,9 +149,36 @@ function getGeneratedIrohBridge() {
   };
 }
 
+function getUnavailableIrohBridge(error) {
+  const unavailable = normalizeRustError(error);
+  return {
+    bridgeVersion() {
+      return `unavailable: ${unavailable.message}`;
+    },
+    nodeId() {
+      return '';
+    },
+    start() {
+      return Promise.reject(unavailable);
+    },
+    stop() {
+      return Promise.resolve();
+    },
+    isRunning() {
+      return false;
+    },
+    async connect() {
+      throw unavailable;
+    },
+  };
+}
+
 function getIrohBridge() {
   const generated = getGeneratedIrohBridge();
   if (generated) return generated;
+  if (generatedRuntimeError) {
+    return getUnavailableIrohBridge(generatedRuntimeError);
+  }
 
   if (!nativeModule) return null;
   const mod = requireNativeModule();
