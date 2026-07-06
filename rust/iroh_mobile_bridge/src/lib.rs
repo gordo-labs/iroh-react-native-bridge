@@ -20,7 +20,7 @@ use tokio::{
     time,
 };
 
-const SOVEREIGN_ALPN: &[u8] = b"music-hub/sovereign/1";
+const SOVEREIGN_ALPN: &[u8] = b"iroh-http/2-duplex";
 const MAX_FRAME_BYTES: u32 = 2 * 1024 * 1024;
 
 static STATE: OnceLock<Mutex<BridgeState>> = OnceLock::new();
