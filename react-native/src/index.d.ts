@@ -5,14 +5,14 @@ export type IrohBridgeConnection = {
 };
 
 export type IrohBridge = {
-  bridgeVersion(): Promise<string>;
-  nodeId(): Promise<string>;
+  bridgeVersion(): string | Promise<string>;
+  nodeId(): string | Promise<string>;
   start(): Promise<void>;
   stop(): Promise<void>;
-  isRunning(): Promise<boolean>;
+  isRunning(): boolean | Promise<boolean>;
   connect(nodeId: string, relayUrl?: string | null): Promise<IrohBridgeConnection>;
 };
 
-export declare const MODULE_NAME = "MusicHubIroh";
+export declare const MODULE_NAME = "IrohBridge";
 export declare function getIrohBridge(): IrohBridge | null;
 export default getIrohBridge;
