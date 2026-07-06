@@ -13,6 +13,8 @@ const NativeEventEmitter = reactNative?.NativeEventEmitter || null;
 const Platform = reactNative?.Platform || { OS: 'unknown' };
 const nativeModule = NativeModules[MODULE_NAME] || null;
 const emitter = nativeModule && NativeEventEmitter ? new NativeEventEmitter(nativeModule) : null;
+let generatedRuntime = null;
+let generatedRuntimeError = null;
 
 function toUint8Array(value) {
   if (value instanceof Uint8Array) return value;
@@ -34,7 +36,100 @@ function requireNativeModule() {
   return nativeModule;
 }
 
+function toArrayBuffer(data) {
+  const bytes = data instanceof Uint8Array ? data : Uint8Array.from(data || []);
+  return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
+}
+
+function normalizeRustError(error) {
+  if (!error) return new Error('Iroh native bridge failed');
+  if (error instanceof Error) return error;
+  if (typeof error === 'object' && typeof error.message === 'string') {
+    return new Error(error.message);
+  }
+  return new Error(String(error));
+}
+
+function resolveGeneratedRuntime() {
+  if (generatedRuntime) return generatedRuntime;
+  if (generatedRuntimeError) return null;
+
+  try {
+    const installer = require('./NativeIrohBridge');
+    const nativeInstaller = installer.default || installer;
+    if (!nativeInstaller || typeof nativeInstaller.installRustCrate !== 'function') {
+      throw new Error('Iroh JSI installer is not available');
+    }
+    nativeInstaller.installRustCrate();
+    generatedRuntime = require('./generated/iroh_mobile_bridge.js');
+    return generatedRuntime;
+  } catch (error) {
+    generatedRuntimeError = normalizeRustError(error);
+    return null;
+  }
+}
+
+function getGeneratedIrohBridge() {
+  const runtime = resolveGeneratedRuntime();
+  if (!runtime) return null;
+
+  return {
+    bridgeVersion() {
+      return runtime.bridgeVersion();
+    },
+    nodeId() {
+      return runtime.nodeId();
+    },
+    start() {
+      runtime.start();
+      return Promise.resolve();
+    },
+    stop() {
+      runtime.stop();
+      return Promise.resolve();
+    },
+    isRunning() {
+      return runtime.isRunning();
+    },
+    async connect(nodeId, relayUrl) {
+      const connectionId = runtime.connect(nodeId, relayUrl || undefined);
+      return {
+        async send(data) {
+          runtime.send(connectionId, toArrayBuffer(data));
+        },
+        onMessage(handler) {
+          let closed = false;
+          const pump = async () => {
+            while (!closed) {
+              try {
+                const next = runtime.nextMessage(connectionId, 0n);
+                if (!closed && next) {
+                  handler(new Uint8Array(next));
+                }
+              } catch {
+                closed = true;
+              }
+              await new Promise((resolve) => setTimeout(resolve, closed ? 0 : 10));
+            }
+          };
+          void pump();
+          return () => {
+            closed = true;
+          };
+        },
+        close() {
+          runtime.close(connectionId);
+          return Promise.resolve();
+        },
+      };
+    },
+  };
+}
+
 function getIrohBridge() {
+  const generated = getGeneratedIrohBridge();
+  if (generated) return generated;
+
   if (!nativeModule) return null;
   const mod = requireNativeModule();
 

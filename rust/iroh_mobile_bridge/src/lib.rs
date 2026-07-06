@@ -1,12 +1,28 @@
-//! iroh_mobile_bridge — Minimal Iroh endpoint for React Native via UniFFI.
-//!
-//! Exposes: node_id, start, stop, echo_roundtrip.
-//! Sovereign Remote Phase P1: prove Rust + UniFFI + Iroh baseline works.
+//! iroh_mobile_bridge — Iroh endpoint and framed stream bridge for React Native.
 
-use std::sync::Mutex;
+use std::{
+    collections::{HashMap, VecDeque},
+    str::FromStr,
+    sync::{
+        atomic::{AtomicBool, AtomicU64, Ordering},
+        Arc, Mutex, OnceLock,
+    },
+    time::Duration,
+};
 
-static NODE_ID: Mutex<Option<String>> = Mutex::new(None);
-static STARTED: Mutex<bool> = Mutex::new(false);
+use iroh::{endpoint::Endpoint, EndpointId};
+use tokio::{
+    io::{AsyncReadExt, AsyncWriteExt},
+    runtime::{Builder as RuntimeBuilder, Runtime},
+    sync::{mpsc, Notify},
+    time,
+};
+
+const SOVEREIGN_ALPN: &[u8] = b"music-hub/sovereign/1";
+const MAX_FRAME_BYTES: u32 = 2 * 1024 * 1024;
+
+static STATE: OnceLock<Mutex<BridgeState>> = OnceLock::new();
+static NEXT_CONNECTION_ID: AtomicU64 = AtomicU64::new(1);
 
 #[derive(Debug, thiserror::Error, uniffi::Error)]
 pub enum IrohBridgeError {
@@ -14,10 +30,101 @@ pub enum IrohBridgeError {
     AlreadyStarted,
     #[error("Iroh endpoint is not started")]
     NotStarted,
-    #[error("Failed to create Iroh endpoint")]
-    EndpointCreationFailed,
+    #[error("Iroh connection is not open")]
+    NotConnected,
+    #[error("Invalid Iroh node id")]
+    InvalidNodeId,
+    #[error("Invalid Iroh frame")]
+    InvalidFrame,
+    #[error("Iroh operation failed: {message}")]
+    OperationFailed { message: String },
     #[error("Internal error")]
     InternalError,
+}
+
+struct BridgeState {
+    runtime: Runtime,
+    endpoint: Option<Endpoint>,
+    node_id: Option<String>,
+    connections: HashMap<String, ManagedConnection>,
+}
+
+#[derive(Clone)]
+struct ManagedConnection {
+    tx: mpsc::Sender<Vec<u8>>,
+    inbox: Arc<Mutex<VecDeque<Vec<u8>>>>,
+    notify: Arc<Notify>,
+    closed: Arc<AtomicBool>,
+}
+
+fn state() -> &'static Mutex<BridgeState> {
+    STATE.get_or_init(|| {
+        let runtime = RuntimeBuilder::new_multi_thread()
+            .worker_threads(2)
+            .enable_all()
+            .build()
+            .expect("failed to create iroh runtime");
+        Mutex::new(BridgeState {
+            runtime,
+            endpoint: None,
+            node_id: None,
+            connections: HashMap::new(),
+        })
+    })
+}
+
+fn with_state<T>(f: impl FnOnce(&mut BridgeState) -> Result<T, IrohBridgeError>) -> Result<T, IrohBridgeError> {
+    let mut guard = state().lock().map_err(|_| IrohBridgeError::InternalError)?;
+    f(&mut guard)
+}
+
+fn err(error: impl std::fmt::Display) -> IrohBridgeError {
+    IrohBridgeError::OperationFailed {
+        message: error.to_string(),
+    }
+}
+
+fn normalize_node_id(input: &str) -> &str {
+    input
+        .strip_prefix("iroh+relay://")
+        .or_else(|| input.strip_prefix("iroh://"))
+        .unwrap_or(input)
+        .trim()
+}
+
+async fn write_frame<W>(writer: &mut W, payload: &[u8]) -> Result<(), IrohBridgeError>
+where
+    W: AsyncWriteExt + Unpin,
+{
+    if payload.len() > MAX_FRAME_BYTES as usize {
+        return Err(IrohBridgeError::InvalidFrame);
+    }
+    writer
+        .write_all(&(payload.len() as u32).to_be_bytes())
+        .await
+        .map_err(err)?;
+    writer.write_all(payload).await.map_err(err)?;
+    writer.flush().await.map_err(err)?;
+    Ok(())
+}
+
+async fn read_frame<R>(reader: &mut R) -> Result<Option<Vec<u8>>, IrohBridgeError>
+where
+    R: AsyncReadExt + Unpin,
+{
+    let mut len_buf = [0u8; 4];
+    match reader.read_exact(&mut len_buf).await {
+        Ok(_) => {}
+        Err(error) if error.kind() == std::io::ErrorKind::UnexpectedEof => return Ok(None),
+        Err(error) => return Err(err(error)),
+    }
+    let len = u32::from_be_bytes(len_buf);
+    if len == 0 || len > MAX_FRAME_BYTES {
+        return Err(IrohBridgeError::InvalidFrame);
+    }
+    let mut payload = vec![0u8; len as usize];
+    reader.read_exact(&mut payload).await.map_err(err)?;
+    Ok(Some(payload))
 }
 
 /// Returns the version of this bridge module.
@@ -26,57 +133,195 @@ fn bridge_version() -> String {
     env!("CARGO_PKG_VERSION").to_string()
 }
 
-/// Returns the Iroh node id (public key) as a hex string.
-/// Returns empty string if the node is not started.
+/// Returns the Iroh node id as z-base-32, matching @momics/iroh-http-node.
 #[uniffi::export]
 fn node_id() -> String {
-    NODE_ID.lock().unwrap().clone().unwrap_or_default()
+    with_state(|state| Ok(state.node_id.clone().unwrap_or_default())).unwrap_or_default()
 }
 
 /// Start the Iroh endpoint.
 #[uniffi::export]
 fn start() -> Result<(), IrohBridgeError> {
-    let mut started = STARTED.lock().unwrap();
-    if *started {
-        return Err(IrohBridgeError::AlreadyStarted);
-    }
+    with_state(|state| {
+        if state.endpoint.is_some() {
+            return Ok(());
+        }
 
-    let rt = tokio::runtime::Builder::new_current_thread()
-        .enable_all()
-        .build()
-        .map_err(|_e| IrohBridgeError::EndpointCreationFailed)?;
-
-    let secret_key = iroh::SecretKey::generate();
-    let node_id_str = hex::encode(secret_key.public().as_bytes());
-
-    // Create endpoint with minimal preset
-    let _endpoint = rt.block_on(async {
-        iroh::endpoint::Endpoint::builder(iroh::endpoint::presets::Minimal)
-            .secret_key(secret_key)
-            .bind()
-            .await
-    }).map_err(|_e| IrohBridgeError::EndpointCreationFailed)?;
-
-    *NODE_ID.lock().unwrap() = Some(node_id_str);
-    *started = true;
-
-    Ok(())
+        let endpoint = state.runtime.block_on(async {
+            Endpoint::builder(iroh::endpoint::presets::Minimal)
+                .alpns(vec![SOVEREIGN_ALPN.to_vec()])
+                .bind()
+                .await
+                .map_err(err)
+        })?;
+        state.node_id = Some(endpoint.id().to_z32());
+        state.endpoint = Some(endpoint);
+        Ok(())
+    })
 }
 
-/// Stop the Iroh endpoint.
+/// Stop the Iroh endpoint and close all active connections.
 #[uniffi::export]
 fn stop() {
-    *NODE_ID.lock().unwrap() = None;
-    *STARTED.lock().unwrap() = false;
+    let _ = with_state(|state| {
+        for (_, connection) in state.connections.drain() {
+            connection.closed.store(true, Ordering::SeqCst);
+            connection.notify.notify_waiters();
+        }
+        if let Some(endpoint) = state.endpoint.take() {
+            state.runtime.block_on(async move {
+                endpoint.close().await;
+            });
+        }
+        state.node_id = None;
+        Ok(())
+    });
 }
 
 /// Returns true if the endpoint is running.
 #[uniffi::export]
 fn is_running() -> bool {
-    *STARTED.lock().unwrap()
+    with_state(|state| Ok(state.endpoint.is_some())).unwrap_or(false)
 }
 
-/// Echo a string — proves UniFFI + Iroh baseline works.
+/// Dial a remote Iroh node and open a bidirectional framed stream.
+#[uniffi::export]
+fn connect(node_id: String, _relay_url: Option<String>) -> Result<String, IrohBridgeError> {
+    with_state(|state| {
+        if state.endpoint.is_none() {
+            return Err(IrohBridgeError::NotStarted);
+        }
+        let endpoint = state.endpoint.clone().ok_or(IrohBridgeError::NotStarted)?;
+        let remote_id = EndpointId::from_str(normalize_node_id(&node_id))
+            .map_err(|_| IrohBridgeError::InvalidNodeId)?;
+
+        let (mut send_stream, mut recv_stream) = state.runtime.block_on(async {
+            let connection = endpoint.connect(remote_id, SOVEREIGN_ALPN).await.map_err(err)?;
+            connection.open_bi().await.map_err(err)
+        })?;
+
+        let connection_id = format!("iroh-{}", NEXT_CONNECTION_ID.fetch_add(1, Ordering::SeqCst));
+        let (tx, mut rx) = mpsc::channel::<Vec<u8>>(128);
+        let inbox = Arc::new(Mutex::new(VecDeque::<Vec<u8>>::new()));
+        let notify = Arc::new(Notify::new());
+        let closed = Arc::new(AtomicBool::new(false));
+
+        let writer_closed = closed.clone();
+        state.runtime.spawn(async move {
+            while let Some(payload) = rx.recv().await {
+                if writer_closed.load(Ordering::SeqCst) {
+                    break;
+                }
+                if write_frame(&mut send_stream, &payload).await.is_err() {
+                    break;
+                }
+            }
+            let _ = send_stream.finish();
+            writer_closed.store(true, Ordering::SeqCst);
+        });
+
+        let reader_inbox = inbox.clone();
+        let reader_notify = notify.clone();
+        let reader_closed = closed.clone();
+        state.runtime.spawn(async move {
+            loop {
+                match read_frame(&mut recv_stream).await {
+                    Ok(Some(payload)) => {
+                        if let Ok(mut guard) = reader_inbox.lock() {
+                            guard.push_back(payload);
+                        }
+                        reader_notify.notify_waiters();
+                    }
+                    Ok(None) | Err(_) => {
+                        reader_closed.store(true, Ordering::SeqCst);
+                        reader_notify.notify_waiters();
+                        break;
+                    }
+                }
+            }
+        });
+
+        state.connections.insert(
+            connection_id.clone(),
+            ManagedConnection {
+                tx,
+                inbox,
+                notify,
+                closed,
+            },
+        );
+        Ok(connection_id)
+    })
+}
+
+/// Send one framed payload on an open connection.
+#[uniffi::export]
+fn send(connection_id: String, data: Vec<u8>) -> Result<(), IrohBridgeError> {
+    let connection = with_state(|state| {
+        state
+            .connections
+            .get(&connection_id)
+            .cloned()
+            .ok_or(IrohBridgeError::NotConnected)
+    })?;
+    if connection.closed.load(Ordering::SeqCst) {
+        return Err(IrohBridgeError::NotConnected);
+    }
+    connection.tx.blocking_send(data).map_err(err)?;
+    Ok(())
+}
+
+/// Wait for the next framed payload. Returns null/None on timeout or close.
+#[uniffi::export]
+fn next_message(connection_id: String, timeout_ms: u64) -> Result<Option<Vec<u8>>, IrohBridgeError> {
+    let connection = with_state(|state| {
+        state
+            .connections
+            .get(&connection_id)
+            .cloned()
+            .ok_or(IrohBridgeError::NotConnected)
+    })?;
+
+    if let Ok(mut inbox) = connection.inbox.lock() {
+        if let Some(payload) = inbox.pop_front() {
+            return Ok(Some(payload));
+        }
+    }
+    if connection.closed.load(Ordering::SeqCst) {
+        return Ok(None);
+    }
+    if timeout_ms == 0 {
+        return Ok(None);
+    }
+
+    let notify = connection.notify.clone();
+    let duration = Duration::from_millis(timeout_ms);
+    with_state(|state| {
+        state.runtime.block_on(async {
+            let _ = time::timeout(duration, notify.notified()).await;
+        });
+        Ok(())
+    })?;
+
+    if let Ok(mut inbox) = connection.inbox.lock() {
+        return Ok(inbox.pop_front());
+    }
+    Ok(None)
+}
+
+/// Close a connection by id.
+#[uniffi::export]
+fn close(connection_id: String) -> Result<(), IrohBridgeError> {
+    with_state(|state| {
+        if let Some(connection) = state.connections.remove(&connection_id) {
+            connection.closed.store(true, Ordering::SeqCst);
+            connection.notify.notify_waiters();
+        }
+        Ok(())
+    })
+}
+
+/// Echo a string — keeps the P1 smoke test API available.
 #[uniffi::export]
 fn echo_roundtrip(input: String) -> String {
     format!("echo: {}", input)
@@ -85,31 +330,24 @@ fn echo_roundtrip(input: String) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::Mutex;
+
+    static TEST_LOCK: Mutex<()> = Mutex::new(());
 
     #[test]
     fn test_bridge_version() {
-        let version = bridge_version();
-        assert_eq!(version, "0.1.0");
+        assert_eq!(bridge_version(), "0.1.0");
     }
 
     #[test]
     fn test_echo_roundtrip() {
-        let result = echo_roundtrip("hello".to_string());
-        assert_eq!(result, "echo: hello");
+        assert_eq!(echo_roundtrip("hello".to_string()), "echo: hello");
     }
 
     #[test]
-    fn test_not_running_initially() {
-        assert!(!is_running());
-    }
-
-    #[test]
-    fn test_node_id_empty_initially() {
-        assert_eq!(node_id(), "");
-    }
-
-    #[test]
-    fn test_start_stop_lifecycle() {
+    fn test_lifecycle() {
+        let _guard = TEST_LOCK.lock().unwrap();
+        stop();
         assert!(!is_running());
         start().expect("start should succeed");
         assert!(is_running());
@@ -120,11 +358,31 @@ mod tests {
     }
 
     #[test]
-    fn test_start_twice_fails() {
-        start().expect("first start");
-        let result = start();
-        assert!(result.is_err());
+    fn test_invalid_connect_target_fails() {
+        let _guard = TEST_LOCK.lock().unwrap();
         stop();
+        start().expect("start should succeed");
+        let result = connect("not-a-node".to_string(), None);
+        assert!(matches!(result, Err(IrohBridgeError::InvalidNodeId)));
+        stop();
+    }
+
+    #[test]
+    fn test_send_without_connection_fails() {
+        let _guard = TEST_LOCK.lock().unwrap();
+        let result = send("missing".to_string(), b"hello".to_vec());
+        assert!(matches!(result, Err(IrohBridgeError::NotConnected)));
+    }
+
+    #[test]
+    fn test_frame_roundtrip_helpers() {
+        let rt = RuntimeBuilder::new_current_thread().enable_all().build().unwrap();
+        rt.block_on(async {
+            let (mut client, mut server) = tokio::io::duplex(1024);
+            write_frame(&mut client, b"{\"kind\":\"ping\"}").await.unwrap();
+            let frame = read_frame(&mut server).await.unwrap().unwrap();
+            assert_eq!(frame, b"{\"kind\":\"ping\"}");
+        });
     }
 }
 

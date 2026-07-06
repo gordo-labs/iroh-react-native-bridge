@@ -1,15 +1,36 @@
 {
-  "name": "@music-hub/iroh-bridge",
+  "name": "music-hub-iroh-bridge",
   "version": "0.1.0",
   "description": "React Native bridge for Music Hub Iroh transport",
+  "homepage": "https://github.com/gordo-labs/iroh-react-native-bridge",
+  "author": "Gordo Labs",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gordo-labs/iroh-react-native-bridge.git",
+    "directory": "react-native"
+  },
   "main": "src/index.js",
   "react-native": "src/index.js",
   "types": "src/index.d.ts",
+  "scripts": {
+    "ubrn:android": "ubrn build android --release --config ubrn.config.yaml --and-generate && node scripts/patch-ubrn-cmake.mjs",
+    "ubrn:ios": "IPHONEOS_DEPLOYMENT_TARGET=13.0 ubrn build ios --release --config ubrn.config.yaml --and-generate && node scripts/patch-ubrn-ios.mjs",
+    "ubrn:generate": "ubrn generate jsi turbo-module --config ubrn.config.yaml && node scripts/patch-ubrn-cmake.mjs && node scripts/patch-ubrn-ios.mjs"
+  },
   "files": [
     "src",
+    "scripts",
     "ios",
-    "android",
-    "MusicHubIrohBridge.podspec",
+    "android/build.gradle",
+    "android/CMakeLists.txt",
+    "android/cpp-adapter.cpp",
+    "android/src/main/AndroidManifest.xml",
+    "android/src/main/java",
+    "android/src/main/jniLibs",
+    "cpp",
+    "ubrn.config.yaml",
+    "IrohBridge.podspec",
+    "MusicHubIrohBridgeFramework.xcframework",
     "react-native.config.js"
   ],
   "keywords": [
@@ -18,6 +39,10 @@
     "music-hub"
   ],
   "license": "MIT",
+  "dependencies": {
+    "@ubjs/core": "^0.31.0-3",
+    "uniffi-bindgen-react-native": "^0.31.0-3"
+  },
   "peerDependencies": {
     "react-native": ">=0.81"
   }
