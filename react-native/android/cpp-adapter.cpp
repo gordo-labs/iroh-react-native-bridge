@@ -7,20 +7,40 @@
 namespace jsi = facebook::jsi;
 namespace react = facebook::react;
 
-// Automated testing checks Java_design_gordo_musichub_iroh_IrohBridgeModule and musichub_irohbridge
+// Automated testing checks Java_design_gordo_musichub_iroh_MusicHubIrohBridgeModule and musichubirohbridge
 // by comparing the whole line here.
 /*
-Java_design_gordo_musichub_iroh_IrohBridgeModule_nativeMultiply(JNIEnv *env, jclass type, jdouble a, jdouble b) {
-    return musichub_irohbridge::multiply(a, b);
+Java_design_gordo_musichub_iroh_MusicHubIrohBridgeModule_nativeMultiply(JNIEnv *env, jclass type, jdouble a, jdouble b) {
+    return musichubirohbridge::multiply(a, b);
 }
 */
 
-// Installer coming from IrohBridgeModule
-extern "C"
-JNIEXPORT jboolean JNICALL
-Java_design_gordo_musichub_iroh_IrohBridgeModule_nativeInstallRustCrate(
+static jboolean initAndroidContext(
     JNIEnv *env,
-    jclass type,
+    jobject applicationContext
+) {
+    JavaVM *javaVm = nullptr;
+    if (env->GetJavaVM(&javaVm) != JNI_OK || javaVm == nullptr || applicationContext == nullptr) {
+        return false;
+    }
+
+    jobject globalContext = env->NewGlobalRef(applicationContext);
+    if (globalContext == nullptr) {
+        return false;
+    }
+
+    uint8_t initialized = musichubirohbridge::initAndroidContext(
+        reinterpret_cast<void *>(javaVm),
+        reinterpret_cast<void *>(globalContext)
+    );
+    if (!initialized) {
+        env->DeleteGlobalRef(globalContext);
+    }
+    return initialized != 0;
+}
+
+static jboolean installRustCrate(
+    JNIEnv *env,
     jlong rtPtr,
     jobject callInvokerHolderJavaObj
 ) {
@@ -32,12 +52,66 @@ Java_design_gordo_musichub_iroh_IrohBridgeModule_nativeInstallRustCrate(
     auto jsCallInvoker = holderCxx->getCallInvoker();
     auto runtime = reinterpret_cast<jsi::Runtime *>(rtPtr);
 
-    return musichub_irohbridge::installRustCrate(*runtime, jsCallInvoker);
+    return musichubirohbridge::installRustCrate(*runtime, jsCallInvoker);
+}
+
+static jboolean cleanupRustCrate(jlong rtPtr) {
+    auto runtime = reinterpret_cast<jsi::Runtime *>(rtPtr);
+    return musichubirohbridge::cleanupRustCrate(*runtime);
+}
+
+// Installer coming from MusicHubIrohBridgeModule
+extern "C"
+JNIEXPORT jboolean JNICALL
+Java_design_gordo_musichub_iroh_MusicHubIrohBridgeModule_nativeInitAndroidContext(
+    JNIEnv *env,
+    jobject type,
+    jobject applicationContext
+) {
+    return initAndroidContext(env, applicationContext);
+}
+
+extern "C"
+JNIEXPORT jboolean JNICALL
+Java_design_gordo_musichub_iroh_MusicHubIrohBridgeModule_nativeInstallRustCrate(
+    JNIEnv *env,
+    jclass type,
+    jlong rtPtr,
+    jobject callInvokerHolderJavaObj
+) {
+    return installRustCrate(env, rtPtr, callInvokerHolderJavaObj);
+}
+
+extern "C"
+JNIEXPORT jboolean JNICALL
+Java_design_gordo_musichub_iroh_MusicHubIrohBridgeModule_nativeCleanupRustCrate(JNIEnv *env, jclass type, jlong rtPtr) {
+    return cleanupRustCrate(rtPtr);
+}
+
+// Backward-compatible JNI aliases for the legacy generated module name.
+extern "C"
+JNIEXPORT jboolean JNICALL
+Java_design_gordo_musichub_iroh_IrohBridgeModule_nativeInitAndroidContext(
+    JNIEnv *env,
+    jobject type,
+    jobject applicationContext
+) {
+    return initAndroidContext(env, applicationContext);
+}
+
+extern "C"
+JNIEXPORT jboolean JNICALL
+Java_design_gordo_musichub_iroh_IrohBridgeModule_nativeInstallRustCrate(
+    JNIEnv *env,
+    jclass type,
+    jlong rtPtr,
+    jobject callInvokerHolderJavaObj
+) {
+    return installRustCrate(env, rtPtr, callInvokerHolderJavaObj);
 }
 
 extern "C"
 JNIEXPORT jboolean JNICALL
 Java_design_gordo_musichub_iroh_IrohBridgeModule_nativeCleanupRustCrate(JNIEnv *env, jclass type, jlong rtPtr) {
-    auto runtime = reinterpret_cast<jsi::Runtime *>(rtPtr);
-    return musichub_irohbridge::cleanupRustCrate(*runtime);
+    return cleanupRustCrate(rtPtr);
 }

@@ -6,9 +6,9 @@ import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.module.annotations.ReactModule
 import com.facebook.react.turbomodule.core.interfaces.CallInvokerHolder
 
-@ReactModule(name = IrohBridgeModule.NAME)
-class IrohBridgeModule(reactContext: ReactApplicationContext) :
-  NativeIrohBridgeSpec(reactContext) {
+@ReactModule(name = MusicHubIrohBridgeModule.NAME)
+class MusicHubIrohBridgeModule(reactContext: ReactApplicationContext) :
+  NativeMusicHubIrohBridgeSpec(reactContext) {
 
   override fun getName(): String {
     return NAME
@@ -39,7 +39,7 @@ class IrohBridgeModule(reactContext: ReactApplicationContext) :
   }
 
   companion object {
-    const val NAME = "IrohBridge"
+    const val NAME = "MusicHubIrohBridge"
 
     init {
       System.loadLibrary("music-hub-iroh-bridge")

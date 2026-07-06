@@ -2,8 +2,14 @@
 #include "music-hub-iroh-bridge.h"
 #include "generated/iroh_mobile_bridge.hpp"
 
-namespace musichub_irohbridge {
+extern "C" uint8_t musichub_iroh_bridge_init_android_context(void *javaVm, void *applicationContext);
+
+namespace musichubirohbridge {
 	using namespace facebook;
+
+	uint8_t initAndroidContext(void *javaVm, void *applicationContext) {
+		return musichub_iroh_bridge_init_android_context(javaVm, applicationContext);
+	}
 
 	uint8_t installRustCrate(jsi::Runtime &runtime, std::shared_ptr<react::CallInvoker> callInvoker) {
 		NativeIrohMobileBridge::registerModule(runtime, callInvoker);

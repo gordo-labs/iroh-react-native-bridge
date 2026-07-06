@@ -26,6 +26,8 @@ const CONNECT_TIMEOUT_MS: u64 = 4_500;
 
 static STATE: OnceLock<Mutex<BridgeState>> = OnceLock::new();
 static NEXT_CONNECTION_ID: AtomicU64 = AtomicU64::new(1);
+#[cfg(target_os = "android")]
+static ANDROID_CONTEXT_INITIALIZED: AtomicBool = AtomicBool::new(false);
 
 #[derive(Debug, thiserror::Error, uniffi::Error)]
 pub enum IrohBridgeError {
@@ -85,6 +87,44 @@ fn err(error: impl std::fmt::Display) -> IrohBridgeError {
     IrohBridgeError::OperationFailed {
         message: error.to_string(),
     }
+}
+
+#[cfg(target_os = "android")]
+#[no_mangle]
+pub unsafe extern "C" fn musichub_iroh_bridge_init_android_context(
+    java_vm: *mut std::ffi::c_void,
+    application_context: *mut std::ffi::c_void,
+) -> u8 {
+    if ANDROID_CONTEXT_INITIALIZED.load(Ordering::SeqCst) {
+        return 1;
+    }
+    if java_vm.is_null() || application_context.is_null() {
+        return 0;
+    }
+
+    let initialized = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        // Iroh's Android DNS reader uses ndk_context. React Native/Expo does
+        // not initialize it for Rust crates, so publish the JavaVM and the
+        // long-lived Application context before constructing an Endpoint.
+        iroh_dns::install_android_jni_context(java_vm, application_context);
+    }))
+    .is_ok();
+
+    if initialized {
+        ANDROID_CONTEXT_INITIALIZED.store(true, Ordering::SeqCst);
+        1
+    } else {
+        0
+    }
+}
+
+#[cfg(not(target_os = "android"))]
+#[no_mangle]
+pub unsafe extern "C" fn musichub_iroh_bridge_init_android_context(
+    _java_vm: *mut std::ffi::c_void,
+    _application_context: *mut std::ffi::c_void,
+) -> u8 {
+    1
 }
 
 fn normalize_node_id(input: &str) -> &str {
