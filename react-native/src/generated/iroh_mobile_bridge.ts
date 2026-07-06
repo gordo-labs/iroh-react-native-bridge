@@ -588,7 +588,7 @@ function uniffiEnsureInitialized() {
     if (nativeModule().ubrn_uniffi_iroh_mobile_bridge_checksum_func_close() !== 50746) {
         throw new UniffiInternalError.ApiChecksumMismatch("uniffi_iroh_mobile_bridge_checksum_func_close");
     }
-    if (nativeModule().ubrn_uniffi_iroh_mobile_bridge_checksum_func_connect() !== 61461) {
+    if (nativeModule().ubrn_uniffi_iroh_mobile_bridge_checksum_func_connect() !== 44454) {
         throw new UniffiInternalError.ApiChecksumMismatch("uniffi_iroh_mobile_bridge_checksum_func_connect");
     }
     if (nativeModule().ubrn_uniffi_iroh_mobile_bridge_checksum_func_echo_roundtrip() !== 22986) {

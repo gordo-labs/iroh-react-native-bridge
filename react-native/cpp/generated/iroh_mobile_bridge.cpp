@@ -137,7 +137,7 @@ extern "C" {
     );
     RustBuffer uniffi_iroh_mobile_bridge_fn_func_connect(
         RustBuffer node_id, 
-        RustBuffer _relay_url, 
+        RustBuffer relay_url,
         RustCallStatus *uniffi_out_err
     );
     RustBuffer uniffi_iroh_mobile_bridge_fn_func_echo_roundtrip(

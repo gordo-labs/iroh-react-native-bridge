@@ -2,6 +2,7 @@
 
 use std::{
     collections::{HashMap, VecDeque},
+    net::SocketAddr,
     str::FromStr,
     sync::{
         atomic::{AtomicBool, AtomicU64, Ordering},
@@ -10,7 +11,8 @@ use std::{
     time::Duration,
 };
 
-use iroh::{endpoint::Endpoint, EndpointId};
+use iroh::{endpoint::Endpoint, EndpointAddr, EndpointId, RelayUrl, TransportAddr};
+use serde::Deserialize;
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     runtime::{Builder as RuntimeBuilder, Runtime},
@@ -90,6 +92,76 @@ fn normalize_node_id(input: &str) -> &str {
         .or_else(|| input.strip_prefix("iroh://"))
         .unwrap_or(input)
         .trim()
+}
+
+#[derive(Debug, Deserialize)]
+struct IrohAddressTicket {
+    id: Option<String>,
+    addrs: Option<Vec<String>>,
+}
+
+fn normalize_dial_hint(input: &str) -> &str {
+    input
+        .strip_prefix("iroh+ticket://")
+        .or_else(|| input.strip_prefix("iroh+ticket:"))
+        .unwrap_or(input)
+        .trim()
+}
+
+fn parse_transport_addr(input: &str) -> Option<TransportAddr> {
+    let value = input
+        .trim()
+        .strip_prefix("iroh+direct://")
+        .or_else(|| input.trim().strip_prefix("ip:"))
+        .unwrap_or(input.trim());
+
+    if let Ok(socket_addr) = SocketAddr::from_str(value) {
+        return Some(TransportAddr::Ip(socket_addr));
+    }
+
+    let relay_value = value.strip_prefix("relay:").unwrap_or(value);
+    if relay_value.starts_with("http://") || relay_value.starts_with("https://") {
+        if let Ok(relay_url) = RelayUrl::from_str(relay_value) {
+            return Some(TransportAddr::Relay(relay_url));
+        }
+    }
+
+    None
+}
+
+fn endpoint_addr_from_hint(
+    remote_id: EndpointId,
+    relay_url: Option<&str>,
+) -> Result<EndpointAddr, IrohBridgeError> {
+    let Some(hint) = relay_url.map(str::trim).filter(|value| !value.is_empty()) else {
+        return Ok(EndpointAddr::new(remote_id));
+    };
+
+    let hint = normalize_dial_hint(hint);
+    if hint.starts_with('{') {
+        let ticket: IrohAddressTicket = serde_json::from_str(hint).map_err(err)?;
+        let ticket_id = match ticket.id.as_deref() {
+            Some(id) => EndpointId::from_str(normalize_node_id(id))
+                .map_err(|_| IrohBridgeError::InvalidNodeId)?,
+            None => remote_id,
+        };
+        let addrs = ticket
+            .addrs
+            .unwrap_or_default()
+            .into_iter()
+            .filter_map(|addr| parse_transport_addr(&addr))
+            .collect::<Vec<_>>();
+        if addrs.is_empty() {
+            return Err(err("Iroh addressing hint did not include usable addresses"));
+        }
+        return Ok(EndpointAddr::from_parts(ticket_id, addrs));
+    }
+
+    if let Some(addr) = parse_transport_addr(hint) {
+        return Ok(EndpointAddr::from_parts(remote_id, [addr]));
+    }
+
+    Ok(EndpointAddr::new(remote_id))
 }
 
 async fn write_frame<W>(writer: &mut W, payload: &[u8]) -> Result<(), IrohBridgeError>
@@ -186,7 +258,7 @@ fn is_running() -> bool {
 
 /// Dial a remote Iroh node and open a bidirectional framed stream.
 #[uniffi::export]
-fn connect(node_id: String, _relay_url: Option<String>) -> Result<String, IrohBridgeError> {
+fn connect(node_id: String, relay_url: Option<String>) -> Result<String, IrohBridgeError> {
     with_state(|state| {
         if state.endpoint.is_none() {
             return Err(IrohBridgeError::NotStarted);
@@ -194,9 +266,10 @@ fn connect(node_id: String, _relay_url: Option<String>) -> Result<String, IrohBr
         let endpoint = state.endpoint.clone().ok_or(IrohBridgeError::NotStarted)?;
         let remote_id = EndpointId::from_str(normalize_node_id(&node_id))
             .map_err(|_| IrohBridgeError::InvalidNodeId)?;
+        let endpoint_addr = endpoint_addr_from_hint(remote_id, relay_url.as_deref())?;
 
         let (mut send_stream, mut recv_stream) = state.runtime.block_on(async {
-            let connection = endpoint.connect(remote_id, SOVEREIGN_ALPN).await.map_err(err)?;
+            let connection = endpoint.connect(endpoint_addr, SOVEREIGN_ALPN).await.map_err(err)?;
             connection.open_bi().await.map_err(err)
         })?;
 
