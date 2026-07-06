@@ -43,11 +43,34 @@ function toArrayBuffer(data) {
 
 function normalizeRustError(error) {
   if (!error) return new Error('Iroh native bridge failed');
-  if (error instanceof Error) return error;
-  if (typeof error === 'object' && typeof error.message === 'string') {
-    return new Error(error.message);
+  const tag = typeof error === 'object' && error ? error.tag : null;
+  const inner = typeof error === 'object' && error ? error.inner : null;
+  const innerMessage =
+    inner && typeof inner === 'object' && typeof inner.message === 'string'
+      ? inner.message
+      : null;
+  const message =
+    typeof tag === 'string' && innerMessage
+      ? `IrohBridgeError.${tag}: ${innerMessage}`
+      : typeof tag === 'string'
+        ? `IrohBridgeError.${tag}`
+        : typeof error === 'object' && typeof error.message === 'string'
+          ? error.message
+          : String(error);
+  if (error instanceof Error && error.message === message) return error;
+  const normalized = new Error(message);
+  if (error instanceof Error) {
+    normalized.cause = error;
   }
-  return new Error(String(error));
+  return normalized;
+}
+
+function callRuntime(fn) {
+  try {
+    return fn();
+  } catch (error) {
+    throw normalizeRustError(error);
+  }
 }
 
 function resolveGeneratedRuntime() {
@@ -75,34 +98,34 @@ function getGeneratedIrohBridge() {
 
   return {
     bridgeVersion() {
-      return runtime.bridgeVersion();
+      return callRuntime(() => runtime.bridgeVersion());
     },
     nodeId() {
-      return runtime.nodeId();
+      return callRuntime(() => runtime.nodeId());
     },
     start() {
-      runtime.start();
+      callRuntime(() => runtime.start());
       return Promise.resolve();
     },
     stop() {
-      runtime.stop();
+      callRuntime(() => runtime.stop());
       return Promise.resolve();
     },
     isRunning() {
-      return runtime.isRunning();
+      return callRuntime(() => runtime.isRunning());
     },
     async connect(nodeId, relayUrl) {
-      const connectionId = runtime.connect(nodeId, relayUrl || undefined);
+      const connectionId = callRuntime(() => runtime.connect(nodeId, relayUrl || undefined));
       return {
         async send(data) {
-          runtime.send(connectionId, toArrayBuffer(data));
+          callRuntime(() => runtime.send(connectionId, toArrayBuffer(data)));
         },
         onMessage(handler) {
           let closed = false;
           const pump = async () => {
             while (!closed) {
               try {
-                const next = runtime.nextMessage(connectionId, 0n);
+                const next = callRuntime(() => runtime.nextMessage(connectionId, 0n));
                 if (!closed && next) {
                   handler(new Uint8Array(next));
                 }
@@ -118,7 +141,7 @@ function getGeneratedIrohBridge() {
           };
         },
         close() {
-          runtime.close(connectionId);
+          callRuntime(() => runtime.close(connectionId));
           return Promise.resolve();
         },
       };

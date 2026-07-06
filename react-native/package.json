@@ -1,6 +1,6 @@
 {
   "name": "music-hub-iroh-bridge",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "React Native bridge for Music Hub Iroh transport",
   "homepage": "https://github.com/gordo-labs/iroh-react-native-bridge",
   "author": "Gordo Labs",
