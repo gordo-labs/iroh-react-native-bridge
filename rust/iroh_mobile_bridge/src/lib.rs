@@ -22,6 +22,7 @@ use tokio::{
 
 const SOVEREIGN_ALPN: &[u8] = b"iroh-http/2-duplex";
 const MAX_FRAME_BYTES: u32 = 2 * 1024 * 1024;
+const CONNECT_TIMEOUT_MS: u64 = 4_500;
 
 static STATE: OnceLock<Mutex<BridgeState>> = OnceLock::new();
 static NEXT_CONNECTION_ID: AtomicU64 = AtomicU64::new(1);
@@ -269,8 +270,12 @@ fn connect(node_id: String, relay_url: Option<String>) -> Result<String, IrohBri
         let endpoint_addr = endpoint_addr_from_hint(remote_id, relay_url.as_deref())?;
 
         let (mut send_stream, mut recv_stream) = state.runtime.block_on(async {
-            let connection = endpoint.connect(endpoint_addr, SOVEREIGN_ALPN).await.map_err(err)?;
-            connection.open_bi().await.map_err(err)
+            time::timeout(Duration::from_millis(CONNECT_TIMEOUT_MS), async {
+                let connection = endpoint.connect(endpoint_addr, SOVEREIGN_ALPN).await.map_err(err)?;
+                connection.open_bi().await.map_err(err)
+            })
+            .await
+            .map_err(|_| err("Iroh connect timed out"))?
         })?;
 
         let connection_id = format!("iroh-{}", NEXT_CONNECTION_ID.fetch_add(1, Ordering::SeqCst));
