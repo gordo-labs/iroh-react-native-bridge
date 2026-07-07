@@ -175,8 +175,14 @@ fn endpoint_addr_from_hint(
     relay_url: Option<&str>,
 ) -> Result<EndpointAddr, IrohBridgeError> {
     let Some(hint) = relay_url.map(str::trim).filter(|value| !value.is_empty()) else {
-        return Ok(EndpointAddr::new(remote_id));
+        return Err(err("Iroh addressing hint is required for mobile tunnel dialing"));
     };
+
+    if hint.starts_with("iroh+relay://") {
+        return Err(err(
+            "Iroh relay hint did not include a relay server URL or direct addresses",
+        ));
+    }
 
     let hint = normalize_dial_hint(hint);
     if hint.starts_with('{') {
@@ -202,7 +208,7 @@ fn endpoint_addr_from_hint(
         return Ok(EndpointAddr::from_parts(remote_id, [addr]));
     }
 
-    Ok(EndpointAddr::new(remote_id))
+    Err(err("Iroh addressing hint did not include usable addresses"))
 }
 
 async fn write_frame<W>(writer: &mut W, payload: &[u8]) -> Result<(), IrohBridgeError>
@@ -452,6 +458,10 @@ mod tests {
 
     static TEST_LOCK: Mutex<()> = Mutex::new(());
 
+    fn test_endpoint_id() -> EndpointId {
+        EndpointId::from_str("qv47olqig7hqpqqw73h6rl2vsusqzt4jdivhicnf2s5tssqlkria").unwrap()
+    }
+
     #[test]
     fn test_bridge_version() {
         assert_eq!(bridge_version(), "0.1.0");
@@ -483,6 +493,36 @@ mod tests {
         let result = connect("not-a-node".to_string(), None);
         assert!(matches!(result, Err(IrohBridgeError::InvalidNodeId)));
         stop();
+    }
+
+    #[test]
+    fn test_endpoint_addr_requires_addressing_hint() {
+        let result = endpoint_addr_from_hint(test_endpoint_id(), None);
+        assert!(matches!(
+            result,
+            Err(IrohBridgeError::OperationFailed { message }) if message.contains("required")
+        ));
+    }
+
+    #[test]
+    fn test_endpoint_addr_rejects_display_only_relay_hint() {
+        let result = endpoint_addr_from_hint(
+            test_endpoint_id(),
+            Some("iroh+relay://qv47olqig7hqpqqw73h6rl2vsusqzt4jdivhicnf2s5tssqlkria"),
+        );
+        assert!(matches!(
+            result,
+            Err(IrohBridgeError::OperationFailed { message }) if message.contains("did not include")
+        ));
+    }
+
+    #[test]
+    fn test_endpoint_addr_accepts_json_ticket_with_direct_addresses() {
+        let result = endpoint_addr_from_hint(
+            test_endpoint_id(),
+            Some(r#"{"id":"qv47olqig7hqpqqw73h6rl2vsusqzt4jdivhicnf2s5tssqlkria","addrs":["127.0.0.1:38473"]}"#),
+        );
+        assert!(result.is_ok());
     }
 
     #[test]
