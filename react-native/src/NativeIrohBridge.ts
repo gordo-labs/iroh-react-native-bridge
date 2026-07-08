@@ -7,7 +7,4 @@ export interface Spec extends TurboModule {
   cleanupRustCrate(): boolean;
 }
 
-export default (
-  TurboModuleRegistry.get<Spec>('MusicHubIrohBridge') ??
-  TurboModuleRegistry.get<Spec>('IrohBridge')
-);
+export default TurboModuleRegistry.get<Spec>('IrohBridge');

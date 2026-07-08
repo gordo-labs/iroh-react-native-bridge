@@ -9,7 +9,7 @@ yet a stable general-purpose React Native Iroh SDK.
 
 | Field | Value |
 | --- | --- |
-| npm package | `music-hub-iroh-bridge` |
+| npm package | `@gordo-labs/react-native-iroh` |
 | current line | `0.1.x` |
 | React Native surface | TurboModule + JSI installed runtime |
 | Rust crate | `rust/iroh_mobile_bridge` |
@@ -37,7 +37,7 @@ yet a stable general-purpose React Native Iroh SDK.
 ### iOS
 
 - Uses `IrohBridge.podspec`.
-- Links `MusicHubIrohBridgeFramework.xcframework`.
+- Links `ReactNativeIrohBridgeFramework.xcframework`.
 - The generated TurboModule name is `IrohBridge`.
 - Requires a native rebuild when the pod, xcframework, or generated native code
   changes.
@@ -46,8 +46,8 @@ yet a stable general-purpose React Native Iroh SDK.
 ### Android
 
 - Uses React Native autolinking through `react-native.config.js`.
-- The current package registers `MusicHubIrohBridgePackage`.
-- The JS resolver accepts both `MusicHubIrohBridge` and `IrohBridge`.
+- The current package registers `IrohBridgePackage`.
+- The JS resolver expects the `IrohBridge` TurboModule.
 - Android initializes Iroh's JNI context before endpoint startup.
 
 ## Runtime Truths

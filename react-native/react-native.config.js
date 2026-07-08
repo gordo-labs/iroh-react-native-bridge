@@ -3,8 +3,8 @@ module.exports = {
     platforms: {
       android: {
         sourceDir: './android',
-        packageImportPath: 'import design.gordo.musichub.iroh.MusicHubIrohBridgePackage;',
-        packageInstance: 'new MusicHubIrohBridgePackage()',
+        packageImportPath: 'import design.gordo.iroh.reactnative.IrohBridgePackage;',
+        packageInstance: 'new IrohBridgePackage()',
       },
       ios: {
         podspecPath: './IrohBridge.podspec',

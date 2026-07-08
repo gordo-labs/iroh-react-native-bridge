@@ -36,7 +36,7 @@ When to keep the fix here:
 - Iroh-specific endpoint lifecycle.
 - Android JNI context setup for Iroh DNS/network behavior.
 - Address-hint validation.
-- Music Hub's chosen ALPN/framing convention.
+- Host-app protocol choices such as ALPN values and message semantics.
 - Package docs, examples, or app-level diagnostics.
 
 ## Iroh

@@ -77,7 +77,7 @@ function close(connectionId) {
     FfiConverterString.lift.bind(FfiConverterString)
   );
 }
-function connect(nodeId2, relayUrl) {
+function connect(nodeId2, alpn, addressHint, timeoutMs) {
   return ((__rb) => {
     try {
       return FfiConverterString.lift(__rb);
@@ -91,7 +91,9 @@ function connect(nodeId2, relayUrl) {
     (callStatus) => {
       return iroh_mobile_bridge_ffi_default().ubrn_uniffi_iroh_mobile_bridge_fn_func_connect(
         FfiConverterString.lower(nodeId2, iroh_mobile_bridge_ffi_default().rustbuffer_alloc),
-        FfiConverterOptionalString.lower(relayUrl, iroh_mobile_bridge_ffi_default().rustbuffer_alloc),
+        FfiConverterString.lower(alpn, iroh_mobile_bridge_ffi_default().rustbuffer_alloc),
+        FfiConverterOptionalString.lower(addressHint, iroh_mobile_bridge_ffi_default().rustbuffer_alloc),
+        FfiConverterOptionalUInt32.lower(timeoutMs, iroh_mobile_bridge_ffi_default().rustbuffer_alloc),
         callStatus
       );
     },
@@ -186,13 +188,14 @@ function send(connectionId, data) {
     FfiConverterString.lift.bind(FfiConverterString)
   );
 }
-function start() {
+function start(alpns) {
   uniffiCaller.rustCallWithError(
     /*liftError:*/
     FfiConverterTypeIrohBridgeError.lift.bind(FfiConverterTypeIrohBridgeError),
     /*caller:*/
     (callStatus) => {
       iroh_mobile_bridge_ffi_default().ubrn_uniffi_iroh_mobile_bridge_fn_func_start(
+        FfiConverterOptionalSequenceString.lower(alpns, iroh_mobile_bridge_ffi_default().rustbuffer_alloc),
         callStatus
       );
     },
@@ -509,7 +512,10 @@ var FfiConverterTypeIrohBridgeError = (() => {
   return new FFIConverter();
 })();
 var FfiConverterOptionalString = new import_core.FfiConverterOptional(FfiConverterString);
+var FfiConverterOptionalUInt32 = new import_core.FfiConverterOptional(import_core.FfiConverterUInt32);
 var FfiConverterOptionalBytes = new import_core.FfiConverterOptional(import_core.FfiConverterArrayBuffer);
+var FfiConverterSequenceString = new import_core.FfiConverterArray(FfiConverterString);
+var FfiConverterOptionalSequenceString = new import_core.FfiConverterOptional(FfiConverterSequenceString);
 function uniffiEnsureInitialized() {
   const bindingsContractVersion = 30;
   const scaffoldingContractVersion = iroh_mobile_bridge_ffi_default().ubrn_ffi_iroh_mobile_bridge_uniffi_contract_version();
@@ -522,7 +528,7 @@ function uniffiEnsureInitialized() {
   if (iroh_mobile_bridge_ffi_default().ubrn_uniffi_iroh_mobile_bridge_checksum_func_close() !== 50746) {
     throw new import_core.UniffiInternalError.ApiChecksumMismatch("uniffi_iroh_mobile_bridge_checksum_func_close");
   }
-  if (iroh_mobile_bridge_ffi_default().ubrn_uniffi_iroh_mobile_bridge_checksum_func_connect() !== 61461) {
+  if (iroh_mobile_bridge_ffi_default().ubrn_uniffi_iroh_mobile_bridge_checksum_func_connect() !== 8623) {
     throw new import_core.UniffiInternalError.ApiChecksumMismatch("uniffi_iroh_mobile_bridge_checksum_func_connect");
   }
   if (iroh_mobile_bridge_ffi_default().ubrn_uniffi_iroh_mobile_bridge_checksum_func_echo_roundtrip() !== 22986) {
@@ -540,7 +546,7 @@ function uniffiEnsureInitialized() {
   if (iroh_mobile_bridge_ffi_default().ubrn_uniffi_iroh_mobile_bridge_checksum_func_send() !== 17431) {
     throw new import_core.UniffiInternalError.ApiChecksumMismatch("uniffi_iroh_mobile_bridge_checksum_func_send");
   }
-  if (iroh_mobile_bridge_ffi_default().ubrn_uniffi_iroh_mobile_bridge_checksum_func_start() !== 32052) {
+  if (iroh_mobile_bridge_ffi_default().ubrn_uniffi_iroh_mobile_bridge_checksum_func_start() !== 42673) {
     throw new import_core.UniffiInternalError.ApiChecksumMismatch("uniffi_iroh_mobile_bridge_checksum_func_start");
   }
   if (iroh_mobile_bridge_ffi_default().ubrn_uniffi_iroh_mobile_bridge_checksum_func_stop() !== 53683) {

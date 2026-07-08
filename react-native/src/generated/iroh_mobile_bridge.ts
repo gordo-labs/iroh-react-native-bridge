@@ -6,7 +6,7 @@
 import nativeModule from "./iroh_mobile_bridge-ffi";
 import { type UniffiRustFutureContinuationCallback, type UniffiForeignFutureDroppedCallback, type UniffiForeignFutureDroppedCallbackStruct,
 } from "./iroh_mobile_bridge-ffi";
-import { type UniffiByteArray, AbstractFfiConverterByteArray, FfiConverterArrayBuffer, FfiConverterBool, FfiConverterInt32, FfiConverterOptional, FfiConverterUInt64, FfiConverterUInt8, RustBuffer, UniffiError, UniffiInternalError, UniffiRustCaller, uniffiCreateFfiConverterString, uniffiTypeNameSymbol, variantOrdinalSymbol,
+import { type UniffiByteArray, AbstractFfiConverterByteArray, FfiConverterArray, FfiConverterArrayBuffer, FfiConverterBool, FfiConverterInt32, FfiConverterOptional, FfiConverterUInt32, FfiConverterUInt64, FfiConverterUInt8, RustBuffer, UniffiError, UniffiInternalError, UniffiRustCaller, uniffiCreateFfiConverterString, uniffiTypeNameSymbol, variantOrdinalSymbol,
 } from "@ubjs/core";
 const uniffiCaller = new UniffiRustCaller(() => ({ code: 0 }));
 
@@ -54,7 +54,7 @@ export function close(connectionId: string): void /*throws*/ {uniffiCaller.rustC
 /**
  * Dial a remote Iroh node and open a bidirectional framed stream.
  */
-export function connect(nodeId: string, relayUrl: string | undefined): string /*throws*/ {
+export function connect(nodeId: string, alpn: string, addressHint: string | undefined, timeoutMs: number | undefined): string /*throws*/ {
     return ((__rb: Uint8Array) => {
         try {
             return FfiConverterString.lift(__rb);
@@ -66,7 +66,9 @@ export function connect(nodeId: string, relayUrl: string | undefined): string /*
             /*caller:*/ (callStatus) => {
                 return nativeModule().ubrn_uniffi_iroh_mobile_bridge_fn_func_connect(
         FfiConverterString.lower(nodeId, nativeModule().rustbuffer_alloc),
-        FfiConverterOptionalString.lower(relayUrl, nativeModule().rustbuffer_alloc),
+        FfiConverterString.lower(alpn, nativeModule().rustbuffer_alloc),
+        FfiConverterOptionalString.lower(addressHint, nativeModule().rustbuffer_alloc),
+        FfiConverterOptionalUInt32.lower(timeoutMs, nativeModule().rustbuffer_alloc),
                 callStatus);
             },
             /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
@@ -164,9 +166,10 @@ export function send(connectionId: string, data: ArrayBuffer): void /*throws*/ {
 /**
  * Start the Iroh endpoint.
  */
-export function start(): void /*throws*/ {uniffiCaller.rustCallWithError(
+export function start(alpns: Array<string> | undefined): void /*throws*/ {uniffiCaller.rustCallWithError(
             /*liftError:*/ FfiConverterTypeIrohBridgeError.lift.bind(FfiConverterTypeIrohBridgeError),
             /*caller:*/ (callStatus) => { nativeModule().ubrn_uniffi_iroh_mobile_bridge_fn_func_start(
+        FfiConverterOptionalSequenceString.lower(alpns, nativeModule().rustbuffer_alloc),
                 callStatus);
             },
             /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
@@ -560,8 +563,17 @@ const FfiConverterTypeIrohBridgeError = (() => {
 // FfiConverter for string | undefined
 const FfiConverterOptionalString = new FfiConverterOptional(FfiConverterString);
 
+// FfiConverter for number | undefined
+const FfiConverterOptionalUInt32 = new FfiConverterOptional(FfiConverterUInt32);
+
 // FfiConverter for ArrayBuffer | undefined
 const FfiConverterOptionalBytes = new FfiConverterOptional(FfiConverterArrayBuffer);
+
+// FfiConverter for Array<string>
+const FfiConverterSequenceString = new FfiConverterArray(FfiConverterString);
+
+// FfiConverter for Array<string> | undefined
+const FfiConverterOptionalSequenceString = new FfiConverterOptional(FfiConverterSequenceString);
 
 
 /**
@@ -588,7 +600,7 @@ function uniffiEnsureInitialized() {
     if (nativeModule().ubrn_uniffi_iroh_mobile_bridge_checksum_func_close() !== 50746) {
         throw new UniffiInternalError.ApiChecksumMismatch("uniffi_iroh_mobile_bridge_checksum_func_close");
     }
-    if (nativeModule().ubrn_uniffi_iroh_mobile_bridge_checksum_func_connect() !== 44454) {
+    if (nativeModule().ubrn_uniffi_iroh_mobile_bridge_checksum_func_connect() !== 8623) {
         throw new UniffiInternalError.ApiChecksumMismatch("uniffi_iroh_mobile_bridge_checksum_func_connect");
     }
     if (nativeModule().ubrn_uniffi_iroh_mobile_bridge_checksum_func_echo_roundtrip() !== 22986) {
@@ -606,7 +618,7 @@ function uniffiEnsureInitialized() {
     if (nativeModule().ubrn_uniffi_iroh_mobile_bridge_checksum_func_send() !== 17431) {
         throw new UniffiInternalError.ApiChecksumMismatch("uniffi_iroh_mobile_bridge_checksum_func_send");
     }
-    if (nativeModule().ubrn_uniffi_iroh_mobile_bridge_checksum_func_start() !== 32052) {
+    if (nativeModule().ubrn_uniffi_iroh_mobile_bridge_checksum_func_start() !== 42673) {
         throw new UniffiInternalError.ApiChecksumMismatch("uniffi_iroh_mobile_bridge_checksum_func_start");
     }
     if (nativeModule().ubrn_uniffi_iroh_mobile_bridge_checksum_func_stop() !== 53683) {

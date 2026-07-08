@@ -1,18 +1,20 @@
-# music-hub-iroh-bridge
+# @gordo-labs/react-native-iroh
 
-React Native TurboModule package for a minimal Iroh mobile bridge.
+Generic React Native TurboModule package for Iroh endpoints and framed byte
+streams.
 
-This package is alpha. It is built for native React Native apps and Expo dev
-clients. It will not work in Expo Go because Expo Go cannot load custom native
-modules.
+This package is alpha. It targets modern React Native apps with the New
+Architecture enabled. It will not work in Expo Go because Expo Go cannot load
+custom native modules.
 
 Native bindings are generated with
-[`uniffi-bindgen-react-native`](https://github.com/jhugman/uniffi-bindgen-react-native).
+[`uniffi-bindgen-react-native`](https://github.com/jhugman/uniffi-bindgen-react-native)
+and use `@ubjs/core` at runtime.
 
 ## Install
 
 ```bash
-npm install music-hub-iroh-bridge
+npm install @gordo-labs/react-native-iroh
 ```
 
 iOS:
@@ -23,17 +25,37 @@ npx pod-install ios
 
 Then rebuild the native app.
 
+## Scope
+
+This package owns only:
+
+- Iroh endpoint lifecycle
+- local node id
+- dialing with caller-provided ALPN and address hints
+- length-prefixed byte streams
+- native package wiring for Android and iOS
+- low-level diagnostics
+
+Host apps own their own protocol, identity, authentication, routing policy,
+HTTP tunneling, media handling, and UI.
+
 ## Usage
 
 ```ts
-import { getIrohBridge } from 'music-hub-iroh-bridge';
+import { getIrohBridge } from '@gordo-labs/react-native-iroh';
 
 const bridge = getIrohBridge();
 
-await bridge.start();
+await bridge.start({ alpns: ['my-app/1'] });
 console.log(await bridge.nodeId());
 
-const connection = await bridge.connect(remoteNodeId, addressHint);
+const connection = await bridge.connect({
+  nodeId: remoteNodeId,
+  alpn: 'my-app/1',
+  addressHint,
+  timeoutMs: 4500,
+});
+
 const unsubscribe = connection.onMessage((bytes) => {
   console.log('received bytes', bytes.byteLength);
 });
@@ -57,25 +79,27 @@ type IrohBridgeConnection = {
 type IrohBridge = {
   bridgeVersion(): string | Promise<string>;
   nodeId(): string | Promise<string>;
-  start(): Promise<void>;
+  start(options?: { alpns?: string[] }): Promise<void>;
   stop(): Promise<void>;
   isRunning(): boolean | Promise<boolean>;
-  connect(nodeId: string, relayUrl?: string | null): Promise<IrohBridgeConnection>;
+  connect(options: {
+    nodeId: string;
+    alpn: string;
+    addressHint?: string | null;
+    timeoutMs?: number;
+  }): Promise<IrohBridgeConnection>;
 };
 ```
 
-`connect(nodeId, relayUrl)` keeps the old parameter name for compatibility, but
-the second argument is best understood as an address hint. The current Rust layer
-rejects display-only values that do not include usable address information.
+`addressHint` must contain usable Iroh addressing information. Display-only
+values that do not include a relay URL, direct socket address, or ticket-like
+address data are rejected before dialing.
 
-## Native Module Names
+## Native Module Name
 
-The package resolves both native module names used during the alpha:
+The native TurboModule name is `IrohBridge`.
 
-- `IrohBridge`
-- `MusicHubIrohBridge`
-
-If neither native module is installed, `getIrohBridge()` returns an unavailable
+If the native module is not installed, `getIrohBridge()` returns an unavailable
 bridge object. Calling `start()` or `connect()` will reject with a diagnostic
 error.
 
@@ -92,15 +116,10 @@ The TurboModule exists but the generated JSI installer is not reachable. Rebuild
 the native app and verify the package version in the JS bundle matches the
 native binary.
 
-`Iroh Rust runtime is not linked into this build yet`
-
-The app fell back to a legacy compatibility shell instead of loading the real
-generated runtime.
-
 `Iroh addressing hint is required`
 
-The app tried to dial with only a node id or with a display-only relay value.
-Provide direct or relay addressing information from the remote peer.
+The app tried to dial with only a node id or with a display-only value. Provide
+direct, relay, or ticket-like addressing information from the remote peer.
 
 ## Development
 
@@ -110,7 +129,7 @@ npm run ubrn:ios
 npm run ubrn:android
 ```
 
-The root repository contains full docs:
+The repository contains full docs:
 
 - `docs/STATUS.md`
 - `docs/ARCHITECTURE.md`

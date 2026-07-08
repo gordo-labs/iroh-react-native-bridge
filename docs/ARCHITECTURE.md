@@ -10,7 +10,7 @@ The bridge has three layers:
 ```txt
 React Native app
   |
-  | import { getIrohBridge } from 'music-hub-iroh-bridge'
+  | import { getIrohBridge } from '@gordo-labs/react-native-iroh'
   v
 react-native/src/index.js
   |
@@ -35,7 +35,8 @@ The Rust crate owns the Iroh endpoint lifecycle and connection map.
 Current behavior:
 
 - Creates an Iroh endpoint with a small Tokio runtime.
-- Uses ALPN `iroh-http/2-duplex` for the Music Hub tunnel use case.
+- Starts with caller-provided ALPNs. If none are provided, it uses the generic
+  `iroh-rn/1` default.
 - Requires an addressing hint for mobile dialing.
 - Opens a bidirectional QUIC stream to the remote peer.
 - Encodes each app payload as a 4-byte big-endian length plus bytes.
@@ -56,21 +57,20 @@ than carrying a local patch indefinitely.
 Native module names:
 
 - iOS: `IrohBridge`
-- Android: `MusicHubIrohBridge` in the current autolink package, with
-  compatibility for `IrohBridge`
+- Android: `IrohBridge`
 
-The JS resolver checks both names so platform naming differences do not make a
-valid binary look missing.
+The JS resolver expects `IrohBridge`. Legacy host-app compatibility shells are
+not part of this package.
 
 ## JavaScript Layer
 
 `react-native/src/index.js` exposes a small ergonomic wrapper:
 
 - `getIrohBridge()`
-- `bridge.start()`
+- `bridge.start({ alpns })`
 - `bridge.stop()`
 - `bridge.nodeId()`
-- `bridge.connect(nodeId, addressHint)`
+- `bridge.connect({ nodeId, alpn, addressHint, timeoutMs })`
 - `connection.send(bytes)`
 - `connection.onMessage(handler)`
 - `connection.close()`

@@ -69,13 +69,13 @@ interface NativeModuleInterface {
     ubrn_ffi_iroh_mobile_bridge_rust_future_free_void(handle: bigint): void;
     ubrn_uniffi_iroh_mobile_bridge_fn_func_bridge_version(uniffi_out_err: UniffiRustCallStatus): Uint8Array;
     ubrn_uniffi_iroh_mobile_bridge_fn_func_close(connectionId: Uint8Array, uniffi_out_err: UniffiRustCallStatus): void;
-    ubrn_uniffi_iroh_mobile_bridge_fn_func_connect(nodeId: Uint8Array, relayUrl: Uint8Array, uniffi_out_err: UniffiRustCallStatus): Uint8Array;
+    ubrn_uniffi_iroh_mobile_bridge_fn_func_connect(nodeId: Uint8Array, alpn: Uint8Array, addressHint: Uint8Array, timeoutMs: Uint8Array, uniffi_out_err: UniffiRustCallStatus): Uint8Array;
     ubrn_uniffi_iroh_mobile_bridge_fn_func_echo_roundtrip(input: Uint8Array, uniffi_out_err: UniffiRustCallStatus): Uint8Array;
     ubrn_uniffi_iroh_mobile_bridge_fn_func_is_running(uniffi_out_err: UniffiRustCallStatus): number;
     ubrn_uniffi_iroh_mobile_bridge_fn_func_next_message(connectionId: Uint8Array, timeoutMs: bigint, uniffi_out_err: UniffiRustCallStatus): Uint8Array;
     ubrn_uniffi_iroh_mobile_bridge_fn_func_node_id(uniffi_out_err: UniffiRustCallStatus): Uint8Array;
     ubrn_uniffi_iroh_mobile_bridge_fn_func_send(connectionId: Uint8Array, data: Uint8Array, uniffi_out_err: UniffiRustCallStatus): void;
-    ubrn_uniffi_iroh_mobile_bridge_fn_func_start(uniffi_out_err: UniffiRustCallStatus): void;
+    ubrn_uniffi_iroh_mobile_bridge_fn_func_start(alpns: Uint8Array, uniffi_out_err: UniffiRustCallStatus): void;
     ubrn_uniffi_iroh_mobile_bridge_fn_func_stop(uniffi_out_err: UniffiRustCallStatus): void;
     ubrn_ffi_iroh_mobile_bridge_uniffi_contract_version(): number;
     ubrn_uniffi_iroh_mobile_bridge_checksum_func_bridge_version(): number;

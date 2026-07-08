@@ -7,7 +7,7 @@ The native package is not available to JavaScript.
 Check:
 
 - You are using a native app build or Expo dev client, not Expo Go.
-- `music-hub-iroh-bridge` is installed.
+- `@gordo-labs/react-native-iroh` is installed.
 - iOS pods were installed after adding the package.
 - The app binary was rebuilt after installing the package.
 - Metro cache was cleared after switching between local and npm packages.
@@ -22,7 +22,7 @@ Check:
 - The app is using the current package version.
 - The native binary was rebuilt after dependency changes.
 - iOS is linking `IrohBridge.podspec`.
-- Android autolinking includes `MusicHubIrohBridgePackage`.
+- Android autolinking includes `IrohBridgePackage`.
 
 ## `Iroh addressing hint is required`
 
@@ -59,7 +59,7 @@ Check:
 
 - The installed binary was produced after the bridge package was added.
 - The app target links `IrohBridge`.
-- The build includes `MusicHubIrohBridgeFramework.xcframework`.
+- The build includes `ReactNativeIrohBridgeFramework.xcframework`.
 - The JS bundle and native binary are from matching package versions.
 
 ## Connection Opens But App Protocol Fails

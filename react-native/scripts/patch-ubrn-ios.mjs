@@ -34,9 +34,11 @@ if (!contents.includes(before)) {
 }
 writeFileSync(headerPath, contents.replace(before, after));
 
-const podspecBefore = `  s.vendored_frameworks = "MusicHubIrohBridgeFramework.xcframework"
+const frameworkName = 'ReactNativeIrohBridgeFramework.xcframework';
+
+const podspecBefore = `  s.vendored_frameworks = "${frameworkName}"
   s.dependency    "uniffi-bindgen-react-native", "0.31.0-3"`;
-const podspecAfter = `  s.vendored_frameworks = "MusicHubIrohBridgeFramework.xcframework"
+const podspecAfter = `  s.vendored_frameworks = "${frameworkName}"
   s.dependency    "uniffi-bindgen-react-native", "0.31.0-3"
   s.pod_target_xcconfig = {
     "EXCLUDED_ARCHS[sdk=iphonesimulator*]" => "x86_64"

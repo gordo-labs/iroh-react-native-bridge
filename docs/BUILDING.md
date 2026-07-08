@@ -52,7 +52,7 @@ After regenerating artifacts:
 2. Compare unexpected generator/runtime changes against
    `jhugman/uniffi-bindgen-react-native`; upstream fixes are preferred for
    generator defects.
-3. Confirm `MusicHubIrohBridgeFramework.xcframework` exists.
+3. Confirm `ReactNativeIrohBridgeFramework.xcframework` exists.
 4. Confirm Android `jniLibs` contains the expected ABIs.
 5. Re-run `npm pack --dry-run`.
 6. Test in a real React Native app.
@@ -64,7 +64,7 @@ Use a local file dependency while developing:
 ```json
 {
   "dependencies": {
-    "music-hub-iroh-bridge": "file:../iroh-react-native-bridge/react-native"
+    "@gordo-labs/react-native-iroh": "file:../iroh-react-native-bridge/react-native"
   }
 }
 ```

@@ -1,4 +1,4 @@
-//! iroh_mobile_bridge — Iroh endpoint and framed stream bridge for React Native.
+//! iroh_mobile_bridge — generic Iroh endpoint and framed stream bridge for React Native.
 
 use std::{
     collections::{HashMap, VecDeque},
@@ -20,9 +20,9 @@ use tokio::{
     time,
 };
 
-const SOVEREIGN_ALPN: &[u8] = b"iroh-http/2-duplex";
+const DEFAULT_ALPN: &str = "iroh-rn/1";
 const MAX_FRAME_BYTES: u32 = 2 * 1024 * 1024;
-const CONNECT_TIMEOUT_MS: u64 = 4_500;
+const DEFAULT_CONNECT_TIMEOUT_MS: u64 = 4_500;
 
 static STATE: OnceLock<Mutex<BridgeState>> = OnceLock::new();
 static NEXT_CONNECTION_ID: AtomicU64 = AtomicU64::new(1);
@@ -51,6 +51,7 @@ struct BridgeState {
     runtime: Runtime,
     endpoint: Option<Endpoint>,
     node_id: Option<String>,
+    alpns: Vec<Vec<u8>>,
     connections: HashMap<String, ManagedConnection>,
 }
 
@@ -73,6 +74,7 @@ fn state() -> &'static Mutex<BridgeState> {
             runtime,
             endpoint: None,
             node_id: None,
+            alpns: Vec::new(),
             connections: HashMap::new(),
         })
     })
@@ -91,7 +93,7 @@ fn err(error: impl std::fmt::Display) -> IrohBridgeError {
 
 #[cfg(target_os = "android")]
 #[no_mangle]
-pub unsafe extern "C" fn musichub_iroh_bridge_init_android_context(
+pub unsafe extern "C" fn react_native_iroh_init_android_context(
     java_vm: *mut std::ffi::c_void,
     application_context: *mut std::ffi::c_void,
 ) -> u8 {
@@ -120,7 +122,7 @@ pub unsafe extern "C" fn musichub_iroh_bridge_init_android_context(
 
 #[cfg(not(target_os = "android"))]
 #[no_mangle]
-pub unsafe extern "C" fn musichub_iroh_bridge_init_android_context(
+pub unsafe extern "C" fn react_native_iroh_init_android_context(
     _java_vm: *mut std::ffi::c_void,
     _application_context: *mut std::ffi::c_void,
 ) -> u8 {
@@ -170,12 +172,31 @@ fn parse_transport_addr(input: &str) -> Option<TransportAddr> {
     None
 }
 
+fn normalize_alpn(alpn: &str) -> Result<Vec<u8>, IrohBridgeError> {
+    let value = alpn.trim();
+    if value.is_empty() {
+        return Err(err("Iroh ALPN must not be empty"));
+    }
+    Ok(value.as_bytes().to_vec())
+}
+
+fn normalize_alpn_list(alpns: Option<Vec<String>>) -> Result<Vec<Vec<u8>>, IrohBridgeError> {
+    let values = alpns.unwrap_or_else(|| vec![DEFAULT_ALPN.to_string()]);
+    if values.is_empty() {
+        return Err(err("At least one Iroh ALPN is required"));
+    }
+    values
+        .iter()
+        .map(|value| normalize_alpn(value))
+        .collect::<Result<Vec<_>, _>>()
+}
+
 fn endpoint_addr_from_hint(
     remote_id: EndpointId,
-    relay_url: Option<&str>,
+    address_hint: Option<&str>,
 ) -> Result<EndpointAddr, IrohBridgeError> {
-    let Some(hint) = relay_url.map(str::trim).filter(|value| !value.is_empty()) else {
-        return Err(err("Iroh addressing hint is required for mobile tunnel dialing"));
+    let Some(hint) = address_hint.map(str::trim).filter(|value| !value.is_empty()) else {
+        return Err(err("Iroh addressing hint is required for dialing"));
     };
 
     if hint.starts_with("iroh+relay://") {
@@ -260,20 +281,22 @@ fn node_id() -> String {
 
 /// Start the Iroh endpoint.
 #[uniffi::export]
-fn start() -> Result<(), IrohBridgeError> {
+fn start(alpns: Option<Vec<String>>) -> Result<(), IrohBridgeError> {
     with_state(|state| {
         if state.endpoint.is_some() {
             return Ok(());
         }
+        let endpoint_alpns = normalize_alpn_list(alpns)?;
 
         let endpoint = state.runtime.block_on(async {
             Endpoint::builder(iroh::endpoint::presets::Minimal)
-                .alpns(vec![SOVEREIGN_ALPN.to_vec()])
+                .alpns(endpoint_alpns.clone())
                 .bind()
                 .await
                 .map_err(err)
         })?;
         state.node_id = Some(endpoint.id().to_z32());
+        state.alpns = endpoint_alpns;
         state.endpoint = Some(endpoint);
         Ok(())
     })
@@ -293,6 +316,7 @@ fn stop() {
             });
         }
         state.node_id = None;
+        state.alpns = Vec::new();
         Ok(())
     });
 }
@@ -305,7 +329,12 @@ fn is_running() -> bool {
 
 /// Dial a remote Iroh node and open a bidirectional framed stream.
 #[uniffi::export]
-fn connect(node_id: String, relay_url: Option<String>) -> Result<String, IrohBridgeError> {
+fn connect(
+    node_id: String,
+    alpn: String,
+    address_hint: Option<String>,
+    timeout_ms: Option<u32>,
+) -> Result<String, IrohBridgeError> {
     with_state(|state| {
         if state.endpoint.is_none() {
             return Err(IrohBridgeError::NotStarted);
@@ -313,11 +342,18 @@ fn connect(node_id: String, relay_url: Option<String>) -> Result<String, IrohBri
         let endpoint = state.endpoint.clone().ok_or(IrohBridgeError::NotStarted)?;
         let remote_id = EndpointId::from_str(normalize_node_id(&node_id))
             .map_err(|_| IrohBridgeError::InvalidNodeId)?;
-        let endpoint_addr = endpoint_addr_from_hint(remote_id, relay_url.as_deref())?;
+        let alpn_bytes = normalize_alpn(&alpn)?;
+        let endpoint_addr = endpoint_addr_from_hint(remote_id, address_hint.as_deref())?;
+        let timeout = Duration::from_millis(
+            timeout_ms
+                .map(u64::from)
+                .filter(|value| *value > 0)
+                .unwrap_or(DEFAULT_CONNECT_TIMEOUT_MS),
+        );
 
         let (mut send_stream, mut recv_stream) = state.runtime.block_on(async {
-            time::timeout(Duration::from_millis(CONNECT_TIMEOUT_MS), async {
-                let connection = endpoint.connect(endpoint_addr, SOVEREIGN_ALPN).await.map_err(err)?;
+            time::timeout(timeout, async {
+                let connection = endpoint.connect(endpoint_addr, &alpn_bytes).await.map_err(err)?;
                 connection.open_bi().await.map_err(err)
             })
             .await
@@ -477,7 +513,7 @@ mod tests {
         let _guard = TEST_LOCK.lock().unwrap();
         stop();
         assert!(!is_running());
-        start().expect("start should succeed");
+        start(None).expect("start should succeed");
         assert!(is_running());
         assert!(!node_id().is_empty());
         stop();
@@ -489,9 +525,26 @@ mod tests {
     fn test_invalid_connect_target_fails() {
         let _guard = TEST_LOCK.lock().unwrap();
         stop();
-        start().expect("start should succeed");
-        let result = connect("not-a-node".to_string(), None);
+        start(Some(vec!["test-alpn/1".to_string()])).expect("start should succeed");
+        let result = connect(
+            "not-a-node".to_string(),
+            "test-alpn/1".to_string(),
+            None,
+            None,
+        );
         assert!(matches!(result, Err(IrohBridgeError::InvalidNodeId)));
+        stop();
+    }
+
+    #[test]
+    fn test_start_rejects_empty_alpn() {
+        let _guard = TEST_LOCK.lock().unwrap();
+        stop();
+        let result = start(Some(vec!["".to_string()]));
+        assert!(matches!(
+            result,
+            Err(IrohBridgeError::OperationFailed { message }) if message.contains("ALPN")
+        ));
         stop();
     }
 

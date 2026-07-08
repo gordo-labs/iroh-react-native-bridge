@@ -49,6 +49,51 @@ function callRuntime(fn) {
   }
 }
 
+function normalizeStartOptions(options) {
+  if (options == null) return undefined;
+  if (typeof options !== 'object' || Array.isArray(options)) {
+    throw new TypeError('Iroh start options must be an object');
+  }
+  if (options.alpns == null) return undefined;
+  if (!Array.isArray(options.alpns)) {
+    throw new TypeError('Iroh start options alpns must be an array');
+  }
+  return options.alpns.map((alpn) => {
+    if (typeof alpn !== 'string' || alpn.trim().length === 0) {
+      throw new TypeError('Iroh ALPN values must be non-empty strings');
+    }
+    return alpn;
+  });
+}
+
+function normalizeConnectOptions(options) {
+  if (typeof options !== 'object' || options == null || Array.isArray(options)) {
+    throw new TypeError('Iroh connect expects { nodeId, alpn, addressHint?, timeoutMs? }');
+  }
+  const nodeId = options.nodeId;
+  const alpn = options.alpn;
+  const addressHint = options.addressHint;
+  const timeoutMs = options.timeoutMs;
+  if (typeof nodeId !== 'string' || nodeId.trim().length === 0) {
+    throw new TypeError('Iroh connect nodeId must be a non-empty string');
+  }
+  if (typeof alpn !== 'string' || alpn.trim().length === 0) {
+    throw new TypeError('Iroh connect alpn must be a non-empty string');
+  }
+  if (addressHint != null && typeof addressHint !== 'string') {
+    throw new TypeError('Iroh connect addressHint must be a string when provided');
+  }
+  if (timeoutMs != null && (!Number.isFinite(timeoutMs) || timeoutMs <= 0)) {
+    throw new TypeError('Iroh connect timeoutMs must be a positive number when provided');
+  }
+  return {
+    nodeId,
+    alpn,
+    addressHint: addressHint || undefined,
+    timeoutMs: timeoutMs == null ? undefined : Math.floor(timeoutMs),
+  };
+}
+
 function resolveGeneratedRuntime() {
   if (generatedRuntime) return generatedRuntime;
   if (generatedRuntimeError) return null;
@@ -79,8 +124,9 @@ function getGeneratedIrohBridge() {
     nodeId() {
       return callRuntime(() => runtime.nodeId());
     },
-    start() {
-      callRuntime(() => runtime.start());
+    start(options) {
+      const alpns = normalizeStartOptions(options);
+      callRuntime(() => runtime.start(alpns));
       return Promise.resolve();
     },
     stop() {
@@ -90,8 +136,16 @@ function getGeneratedIrohBridge() {
     isRunning() {
       return callRuntime(() => runtime.isRunning());
     },
-    async connect(nodeId, relayUrl) {
-      const connectionId = callRuntime(() => runtime.connect(nodeId, relayUrl || undefined));
+    async connect(options) {
+      const connectOptions = normalizeConnectOptions(options);
+      const connectionId = callRuntime(() =>
+        runtime.connect(
+          connectOptions.nodeId,
+          connectOptions.alpn,
+          connectOptions.addressHint,
+          connectOptions.timeoutMs,
+        ),
+      );
       return {
         async send(data) {
           callRuntime(() => runtime.send(connectionId, toArrayBuffer(data)));
