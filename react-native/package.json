@@ -1,7 +1,7 @@
 {
   "name": "music-hub-iroh-bridge",
   "version": "0.1.1",
-  "description": "React Native bridge for Music Hub Iroh transport",
+  "description": "React Native TurboModule bridge for minimal Iroh mobile sessions",
   "homepage": "https://github.com/gordo-labs/iroh-react-native-bridge",
   "author": "Gordo Labs",
   "repository": {
@@ -9,10 +9,15 @@
     "url": "git+https://github.com/gordo-labs/iroh-react-native-bridge.git",
     "directory": "react-native"
   },
+  "bugs": {
+    "url": "https://github.com/gordo-labs/iroh-react-native-bridge/issues"
+  },
   "main": "src/index.js",
   "react-native": "src/index.js",
   "types": "src/index.d.ts",
   "scripts": {
+    "pack:dry-run": "npm pack --dry-run",
+    "test:package": "npm pack --dry-run",
     "ubrn:android": "ubrn build android --release --config ubrn.config.yaml --and-generate && node scripts/patch-ubrn-cmake.mjs",
     "ubrn:ios": "IPHONEOS_DEPLOYMENT_TARGET=13.0 ubrn build ios --release --config ubrn.config.yaml --and-generate && node scripts/patch-ubrn-ios.mjs",
     "ubrn:generate": "ubrn generate jsi turbo-module --config ubrn.config.yaml && node scripts/patch-ubrn-cmake.mjs && node scripts/patch-ubrn-ios.mjs"
@@ -36,6 +41,10 @@
   "keywords": [
     "react-native",
     "iroh",
+    "quic",
+    "p2p",
+    "turbomodule",
+    "uniffi",
     "music-hub"
   ],
   "license": "MIT",

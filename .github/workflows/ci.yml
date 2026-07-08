@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, epic/react-native-package]
   pull_request:
     branches: [main]
 
@@ -17,3 +17,16 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - run: cargo test
+
+  package:
+    name: React Native package dry run
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: react-native
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm pack --dry-run

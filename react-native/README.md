@@ -1,26 +1,123 @@
-# @music-hub/iroh-bridge
+# music-hub-iroh-bridge
 
-React Native package for the Music Hub Iroh mobile bridge.
+React Native TurboModule package for a minimal Iroh mobile bridge.
 
-This package exposes the `IrohBridge` TurboModule to React Native autolinking
-on iOS and Android. The TurboModule installs the Rust/UniFFI JSI runtime and
-`src/index.js` then calls the generated Rust bindings directly.
+This package is alpha. It is built for native React Native apps and Expo dev
+clients. It will not work in Expo Go because Expo Go cannot load custom native
+modules.
 
-`MusicHubIroh` is kept only as a legacy compatibility shell. If the package falls
-back to that module, the app is not running the real Iroh runtime.
+Native bindings are generated with
+[`uniffi-bindgen-react-native`](https://github.com/jhugman/uniffi-bindgen-react-native).
 
-Expected mobile behavior:
+## Install
 
-- `Iroh native bridge is not installed in this mobile build`: the package was
-  not included by the app build.
-- `Iroh native bridge runtime is not available` / TurboModule errors: rebuild
-  the native app after `npm install` + `pod install`; ensure the New
-  Architecture/TurboModule path is enabled for this package.
-- `Iroh Rust runtime is not linked into this ... build yet`: the app fell back
-  to the legacy `MusicHubIroh` shell instead of loading `IrohBridge`.
+```bash
+npm install music-hub-iroh-bridge
+```
 
-Local development:
+iOS:
 
-1. Build Rust artifacts with `npm run ubrn:ios` or `npm run ubrn:android`.
-2. In the mobile app, use `music-hub-iroh-bridge: file:../iroh-react-native-bridge/react-native`.
-3. Re-run `npm install`, iOS pods, and rebuild the native app.
+```bash
+npx pod-install ios
+```
+
+Then rebuild the native app.
+
+## Usage
+
+```ts
+import { getIrohBridge } from 'music-hub-iroh-bridge';
+
+const bridge = getIrohBridge();
+
+await bridge.start();
+console.log(await bridge.nodeId());
+
+const connection = await bridge.connect(remoteNodeId, addressHint);
+const unsubscribe = connection.onMessage((bytes) => {
+  console.log('received bytes', bytes.byteLength);
+});
+
+await connection.send(new Uint8Array([1, 2, 3]));
+
+unsubscribe();
+await connection.close();
+await bridge.stop();
+```
+
+## API
+
+```ts
+type IrohBridgeConnection = {
+  send(data: Uint8Array | number[]): Promise<void>;
+  onMessage(handler: (data: Uint8Array) => void): () => void;
+  close(): Promise<void>;
+};
+
+type IrohBridge = {
+  bridgeVersion(): string | Promise<string>;
+  nodeId(): string | Promise<string>;
+  start(): Promise<void>;
+  stop(): Promise<void>;
+  isRunning(): boolean | Promise<boolean>;
+  connect(nodeId: string, relayUrl?: string | null): Promise<IrohBridgeConnection>;
+};
+```
+
+`connect(nodeId, relayUrl)` keeps the old parameter name for compatibility, but
+the second argument is best understood as an address hint. The current Rust layer
+rejects display-only values that do not include usable address information.
+
+## Native Module Names
+
+The package resolves both native module names used during the alpha:
+
+- `IrohBridge`
+- `MusicHubIrohBridge`
+
+If neither native module is installed, `getIrohBridge()` returns an unavailable
+bridge object. Calling `start()` or `connect()` will reject with a diagnostic
+error.
+
+## Expected Errors
+
+`IrohBridge TurboModule is not installed for ios/android`
+
+The native package was not linked into the app binary. Reinstall dependencies,
+install pods on iOS, and rebuild the native app.
+
+`Iroh JSI installer is not available`
+
+The TurboModule exists but the generated JSI installer is not reachable. Rebuild
+the native app and verify the package version in the JS bundle matches the
+native binary.
+
+`Iroh Rust runtime is not linked into this build yet`
+
+The app fell back to a legacy compatibility shell instead of loading the real
+generated runtime.
+
+`Iroh addressing hint is required`
+
+The app tried to dial with only a node id or with a display-only relay value.
+Provide direct or relay addressing information from the remote peer.
+
+## Development
+
+```bash
+npm pack --dry-run
+npm run ubrn:ios
+npm run ubrn:android
+```
+
+The root repository contains full docs:
+
+- `docs/STATUS.md`
+- `docs/ARCHITECTURE.md`
+- `docs/BUILDING.md`
+- `docs/UPSTREAM.md`
+- `docs/TROUBLESHOOTING.md`
+
+## License
+
+MIT.

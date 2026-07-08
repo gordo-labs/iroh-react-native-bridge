@@ -1,0 +1,47 @@
+name: Feature request
+description: Propose an API, packaging, docs, or platform improvement.
+title: "[Feature]: "
+labels: ["enhancement", "needs-triage"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What current limitation blocks you?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: What would you like the bridge to expose or change?
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - JavaScript API
+        - iOS native
+        - Android native
+        - Rust/Iroh
+        - Packaging
+        - Documentation
+        - Example app
+        - CI/testing
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+    validations:
+      required: false
+  - type: textarea
+    id: compatibility
+    attributes:
+      label: Compatibility impact
+      description: Could this change break existing apps or require native rebuilds?
+    validations:
+      required: false

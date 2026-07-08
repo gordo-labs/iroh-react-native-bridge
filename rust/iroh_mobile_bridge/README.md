@@ -1,5 +1,38 @@
-# iroh_mobile_bridge (Rust)
+# iroh_mobile_bridge
 
-Implement per [TASK.md](../../TASK.md) phase P1.
+Rust crate used by `music-hub-iroh-bridge`.
 
-Target: UniFFI proc-macros, minimal endpoint + bidi stream API for React Native.
+It owns the Iroh endpoint lifecycle and exports a small UniFFI/JSI-compatible
+API for React Native:
+
+- `bridge_version`
+- `start`
+- `stop`
+- `is_running`
+- `node_id`
+- `connect`
+- `send`
+- `next_message`
+- `close`
+
+The crate uses a length-prefixed binary frame format over an Iroh bidirectional
+stream. It does not implement host app authentication, pairing, HTTP tunneling,
+or user/session logic.
+
+## Test
+
+```bash
+cargo test
+```
+
+## Android
+
+Android endpoint startup requires JNI context initialization before Iroh creates
+its endpoint. The exported `musichub_iroh_bridge_init_android_context` function
+is called by the Android native module before installing the Rust JSI runtime.
+
+## Dialing
+
+Mobile dialing currently requires an address hint. A bare node id or
+display-only relay id is rejected because it does not contain enough information
+to open the connection reliably.

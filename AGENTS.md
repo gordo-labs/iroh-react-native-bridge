@@ -1,17 +1,34 @@
-# AGENTS.md — iroh-react-native-bridge
+# AGENTS.md - iroh-react-native-bridge
 
-**Git:** independent repo, mounted as a **submodule** at the Music Hub parent root (`iroh-react-native-bridge/`).
+Independent Git repository, mounted as a submodule at the Music Hub parent root
+under `iroh-react-native-bridge/`.
 
-## Every session
+## Every Session
 
-1. [PROJECT.json](./PROJECT.json) + [TASK.md](./TASK.md)
-2. Parent context (on demand): [../DOCS-MAP.md](../DOCS-MAP.md), [../working/roadmap/future/decentralized-hub-discovery/IROH-MOBILE-BINDINGS.md](../working/roadmap/future/decentralized-hub-discovery/IROH-MOBILE-BINDINGS.md)
+1. Check `git status --short --branch`.
+2. Read [PROJECT.json](./PROJECT.json), [WORKING-INDEX.md](./WORKING-INDEX.md),
+   and [docs/STATUS.md](./docs/STATUS.md).
+3. Respect unrelated local changes. Native generated artifacts are large and may
+   be intentionally dirty during device testing.
 
 ## Scope
 
-Pre-implementation experiment only. **Not** in Sovereign Remote alpha (mobile uses WebRTC). Do not change `desktop/` or `mobile/` from here unless integrating a published bridge.
+This repo owns the reusable React Native Iroh bridge:
 
-## Clone (fresh parent checkout)
+- Rust crate in `rust/iroh_mobile_bridge/`.
+- npm package in `react-native/`.
+- Public open-source docs, CI, issue templates, and contribution process.
+
+Music Hub app integration lives in the parent `mobile/` and `desktop/` repos.
+Do not edit those repos from here unless the task explicitly asks for app
+integration.
+
+## Status
+
+Alpha. The bridge is published and used for controlled Music Hub Iroh testing,
+but the API and packaging are not stable. Keep docs honest about current limits.
+
+## Clone From Parent Checkout
 
 ```bash
 git clone --recurse-submodules https://github.com/gordo-labs/music-hub-parent.git
