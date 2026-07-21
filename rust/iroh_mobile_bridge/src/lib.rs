@@ -11,7 +11,7 @@ use std::{
     time::Duration,
 };
 
-use iroh::{endpoint::Endpoint, EndpointAddr, EndpointId, RelayUrl, TransportAddr};
+use iroh::{endpoint::Endpoint, EndpointAddr, EndpointId, RelayMode, RelayUrl, TransportAddr};
 use serde::Deserialize;
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
@@ -289,7 +289,14 @@ fn start(alpns: Option<Vec<String>>) -> Result<(), IrohBridgeError> {
         let endpoint_alpns = normalize_alpn_list(alpns)?;
 
         let endpoint = state.runtime.block_on(async {
+            // presets::Minimal leaves RelayMode::Disabled, which strips the relay
+            // transport entirely: relay candidates in the peer's EndpointAddr are
+            // undialable and NAT hole punching (coordinated over relays) never
+            // happens, so connects only succeed when a direct addr is reachable
+            // (same LAN). Enable the default relay servers so cross-network dials
+            // can fall back to the remote peer's relay.
             Endpoint::builder(iroh::endpoint::presets::Minimal)
+                .relay_mode(RelayMode::Default)
                 .alpns(endpoint_alpns.clone())
                 .bind()
                 .await
