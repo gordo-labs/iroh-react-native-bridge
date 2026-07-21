@@ -1,6 +1,6 @@
 {
   "name": "@gordo-labs/react-native-iroh",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Generic React Native TurboModule bridge for Iroh endpoints and framed streams",
   "homepage": "https://github.com/gordo-labs/iroh-react-native-bridge",
   "author": "Gordo Labs",
@@ -18,8 +18,8 @@
   "scripts": {
     "pack:dry-run": "npm pack --dry-run",
     "test:package": "node scripts/check-generic-package.mjs && npm pack --dry-run",
-    "ubrn:android": "ubrn build android --release --config ubrn.config.yaml --and-generate && node scripts/patch-ubrn-cmake.mjs && node scripts/patch-ubrn-js.mjs",
-    "ubrn:ios": "IPHONEOS_DEPLOYMENT_TARGET=13.0 ubrn build ios --release --config ubrn.config.yaml --and-generate && node scripts/patch-ubrn-ios.mjs && node scripts/patch-ubrn-cmake.mjs && node scripts/patch-ubrn-js.mjs",
+    "ubrn:android": "node scripts/with-native-build-env.mjs --android ubrn build android --release --config ubrn.config.yaml --and-generate && node scripts/patch-ubrn-cmake.mjs && node scripts/patch-ubrn-js.mjs",
+    "ubrn:ios": "IPHONEOS_DEPLOYMENT_TARGET=13.0 node scripts/with-native-build-env.mjs ubrn build ios --release --config ubrn.config.yaml --and-generate && node scripts/patch-ubrn-ios.mjs && node scripts/patch-ubrn-cmake.mjs && node scripts/patch-ubrn-js.mjs",
     "ubrn:generate": "ubrn generate jsi turbo-module --config ubrn.config.yaml && node scripts/patch-ubrn-cmake.mjs && node scripts/patch-ubrn-ios.mjs && node scripts/patch-ubrn-js.mjs"
   },
   "files": [

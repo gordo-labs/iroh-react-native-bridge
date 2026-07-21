@@ -43,6 +43,39 @@ not contain enough dialing information.
 The remote peer did not publish usable direct addresses or relay addressing.
 Fix the remote peer/presence publisher before retrying from mobile.
 
+## Android/iOS build: `can't find crate for core` / target may not be installed
+
+Homebrew `rust`/`cargo` are often first on PATH but have no iOS/Android std.
+`npm run ubrn:android` and `npm run ubrn:ios` force the active **rustup**
+toolchain via `scripts/with-native-build-env.mjs`.
+
+If it still fails:
+
+```bash
+rustup target add aarch64-apple-ios aarch64-apple-ios-sim
+rustup target add aarch64-linux-android armv7-linux-androideabi x86_64-linux-android i686-linux-android
+```
+
+## Android build: `Could not find any NDK`
+
+`cargo-ndk` needs `ANDROID_NDK_HOME`. Prefer:
+
+```bash
+cd react-native
+npm run ubrn:android
+```
+
+That script wraps `ubrn` with `scripts/with-native-build-env.mjs --android`, which
+picks the newest side-by-side NDK under Homebrew or Android Studio SDK roots.
+
+Manual override:
+
+```bash
+export ANDROID_HOME=/opt/homebrew/share/android-commandlinetools
+export ANDROID_NDK_HOME=$ANDROID_HOME/ndk/27.1.12297006
+npm run ubrn:android
+```
+
 ## Android: `android context was not initialized`
 
 The Rust Iroh runtime needs Android JNI context before endpoint startup.

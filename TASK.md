@@ -20,11 +20,14 @@ Completed:
 - React Native TurboModule package.
 - Android `.so` artifacts.
 - iOS `.xcframework` artifact.
-- npm package `music-hub-iroh-bridge`.
+- npm package `@gordo-labs/react-native-iroh`.
 - Music Hub local integration via `file:` dependency.
 - Desktop/mobile tunnel smoke coverage in Music Hub tests.
 - `jhugman/uniffi-bindgen-react-native` documented as the upstream generator
   and preferred target for generator/runtime fixes.
+- `RelayMode::Default` so mobile can dial via n0 relays off-LAN (0.1.2).
+- Build helpers that prefer rustup + auto-detect Homebrew NDK.
+- Real-device Android QA with Music Hub Sovereign playback (2026-07-21).
 
 Still required before stable:
 

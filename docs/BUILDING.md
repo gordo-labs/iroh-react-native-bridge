@@ -8,8 +8,15 @@ This document describes local source builds for contributors.
 - Rust stable.
 - Xcode and CocoaPods for iOS.
 - Android Studio, Android SDK, and NDK for Android.
+- `cargo-ndk` (`cargo install cargo-ndk`) for Android Rust cross-compiles.
 - A React Native app that uses a development client or native build. Expo Go
   cannot load custom native modules.
+
+`npm run ubrn:android` / `npm run ubrn:ios` force the active rustup toolchain
+(not Homebrew rust) via `scripts/with-native-build-env.mjs`. The Android script
+also auto-detects `ANDROID_HOME` / `ANDROID_NDK_HOME` from Homebrew
+`android-commandlinetools` (`/opt/homebrew/share/android-commandlinetools`) or
+`~/Library/Android/sdk`. Override either variable if needed.
 
 This repo uses
 [`uniffi-bindgen-react-native`](https://github.com/jhugman/uniffi-bindgen-react-native)

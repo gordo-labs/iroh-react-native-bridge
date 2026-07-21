@@ -31,6 +31,8 @@ yet a stable general-purpose React Native Iroh SDK.
 | High-level HTTP tunnel | Host app responsibility |
 | App authentication/pairing | Host app responsibility |
 | Public example app | Not yet |
+| Off-LAN dial via n0 default relays | Implemented (`RelayMode::Default`, 0.1.2) |
+| Music Hub Android device QA (connect + stream) | Verified 2026-07-21 against hub on iroh 1.x prod relays |
 
 ## Platform Notes
 
