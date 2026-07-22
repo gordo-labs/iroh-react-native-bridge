@@ -10,14 +10,17 @@ API for React Native:
 - `stop`
 - `is_running`
 - `node_id`
-- `connect`
+- `connect` (opens a new stream and reuses the peer's QUIC session)
 - `send`
+- `is_stream_open`
 - `next_message`
 - `close`
 
-The crate uses a length-prefixed binary frame format over an Iroh bidirectional
-stream. It does not implement host app authentication, pairing, HTTP tunneling,
-or user/session logic.
+The crate uses a length-prefixed binary frame format over independent Iroh
+bidirectional streams. Calls for the same peer and ALPN reuse a bounded cache of
+QUIC sessions. Send/receive queues are bounded and a slow JavaScript consumer
+activates QUIC backpressure. It does not implement host app authentication,
+pairing, HTTP tunneling, or user/session logic.
 
 ## Test
 

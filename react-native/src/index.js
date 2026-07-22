@@ -117,6 +117,144 @@ function getGeneratedIrohBridge() {
   const runtime = resolveGeneratedRuntime();
   if (!runtime) return null;
 
+  const connectStream = async (options) => {
+    const connectOptions = normalizeConnectOptions(options);
+    const connectionId = callRuntime(() =>
+      runtime.connect(
+        connectOptions.nodeId,
+        connectOptions.alpn,
+        connectOptions.addressHint,
+        connectOptions.timeoutMs,
+      ),
+    );
+    const messageHandlers = new Set();
+    const closeHandlers = new Set();
+    const errorHandlers = new Set();
+    let closed = false;
+    let pumping = false;
+    let sendTail = Promise.resolve();
+
+    const emitClose = () => {
+      if (closed) return;
+      closed = true;
+      for (const handler of closeHandlers) {
+        try { handler(); } catch {}
+      }
+    };
+    const emitError = (error) => {
+      const normalized = normalizeRustError(error);
+      for (const handler of errorHandlers) {
+        try { handler(normalized); } catch {}
+      }
+      return normalized;
+    };
+    const hasPumpObservers = () => messageHandlers.size > 0 || closeHandlers.size > 0;
+    const pump = async () => {
+      if (pumping || closed || !hasPumpObservers()) return;
+      pumping = true;
+      let idlePolls = 0;
+      try {
+        while (!closed && hasPumpObservers()) {
+          const next = messageHandlers.size > 0
+            ? callRuntime(() => runtime.nextMessage(connectionId, 0n))
+            : null;
+          if (next) {
+            idlePolls = 0;
+            const bytes = new Uint8Array(next);
+            for (const handler of messageHandlers) {
+              try { handler(bytes); } catch (error) { emitError(error); }
+            }
+          } else if (
+            typeof runtime.isStreamOpen === 'function' &&
+            !callRuntime(() => runtime.isStreamOpen(connectionId))
+          ) {
+            try { callRuntime(() => runtime.close(connectionId)); } catch {}
+            emitClose();
+            break;
+          } else {
+            idlePolls += 1;
+          }
+          const delayMs = next ? 0 : messageHandlers.size === 0 ? 50 : idlePolls < 20 ? 10 : 50;
+          await new Promise((resolve) => setTimeout(resolve, delayMs));
+        }
+      } catch (error) {
+        emitError(error);
+        try { callRuntime(() => runtime.close(connectionId)); } catch {}
+        emitClose();
+      } finally {
+        pumping = false;
+        if (!closed && hasPumpObservers()) void pump();
+      }
+    };
+
+    const stream = {
+      send(data) {
+        const payload = toArrayBuffer(data);
+        const operation = sendTail.then(async () => {
+          if (closed) throw new Error('Iroh stream is closed');
+          const startedAt = Date.now();
+          for (;;) {
+            try {
+              callRuntime(() => runtime.send(connectionId, payload));
+              return;
+            } catch (error) {
+              const normalized = normalizeRustError(error);
+              const backpressured = normalized.message.includes('send queue is full');
+              if (!backpressured || closed || Date.now() - startedAt >= 30_000) {
+                throw emitError(normalized);
+              }
+              await new Promise((resolve) => setTimeout(resolve, 5));
+            }
+          }
+        });
+        sendTail = operation.catch(() => {});
+        return operation;
+      },
+      onMessage(handler) {
+        if (typeof handler !== 'function') {
+          throw new TypeError('Iroh onMessage handler must be a function');
+        }
+        if (closed) return () => {};
+        messageHandlers.add(handler);
+        void pump();
+        return () => messageHandlers.delete(handler);
+      },
+      onClose(handler) {
+        if (typeof handler !== 'function') {
+          throw new TypeError('Iroh onClose handler must be a function');
+        }
+        if (closed) {
+          void Promise.resolve().then(handler);
+          return () => {};
+        }
+        closeHandlers.add(handler);
+        void pump();
+        return () => closeHandlers.delete(handler);
+      },
+      onError(handler) {
+        if (typeof handler !== 'function') {
+          throw new TypeError('Iroh onError handler must be a function');
+        }
+        errorHandlers.add(handler);
+        return () => errorHandlers.delete(handler);
+      },
+      isClosed() {
+        return closed;
+      },
+      close() {
+        if (!closed) {
+          try {
+            callRuntime(() => runtime.close(connectionId));
+          } finally {
+            emitClose();
+          }
+        }
+        return Promise.resolve();
+      },
+    };
+    return stream;
+  };
+
   return {
     bridgeVersion() {
       return callRuntime(() => runtime.bridgeVersion());
@@ -136,43 +274,34 @@ function getGeneratedIrohBridge() {
     isRunning() {
       return callRuntime(() => runtime.isRunning());
     },
-    async connect(options) {
+    connect(options) {
+      return connectStream(options);
+    },
+    async openSession(options) {
       const connectOptions = normalizeConnectOptions(options);
-      const connectionId = callRuntime(() =>
-        runtime.connect(
-          connectOptions.nodeId,
-          connectOptions.alpn,
-          connectOptions.addressHint,
-          connectOptions.timeoutMs,
-        ),
-      );
+      const streams = new Set();
+      let closed = false;
       return {
-        async send(data) {
-          callRuntime(() => runtime.send(connectionId, toArrayBuffer(data)));
+        async openStream() {
+          if (closed) throw new Error('Iroh session is closed');
+          const stream = await connectStream(connectOptions);
+          if (closed) {
+            await stream.close();
+            throw new Error('Iroh session closed while opening a stream');
+          }
+          streams.add(stream);
+          stream.onClose(() => streams.delete(stream));
+          return stream;
         },
-        onMessage(handler) {
-          let closed = false;
-          const pump = async () => {
-            while (!closed) {
-              try {
-                const next = callRuntime(() => runtime.nextMessage(connectionId, 0n));
-                if (!closed && next) {
-                  handler(new Uint8Array(next));
-                }
-              } catch {
-                closed = true;
-              }
-              await new Promise((resolve) => setTimeout(resolve, closed ? 0 : 10));
-            }
-          };
-          void pump();
-          return () => {
-            closed = true;
-          };
+        isClosed() {
+          return closed;
         },
-        close() {
-          callRuntime(() => runtime.close(connectionId));
-          return Promise.resolve();
+        async close() {
+          if (closed) return;
+          closed = true;
+          const active = [...streams];
+          streams.clear();
+          await Promise.allSettled(active.map((stream) => stream.close()));
         },
       };
     },
@@ -198,6 +327,9 @@ function getUnavailableIrohBridge(error) {
       return false;
     },
     async connect() {
+      throw unavailable;
+    },
+    async openSession() {
       throw unavailable;
     },
   };

@@ -10,7 +10,8 @@ yet a stable general-purpose React Native Iroh SDK.
 | Field | Value |
 | --- | --- |
 | npm package | `@gordo-labs/react-native-iroh` |
-| current line | `0.1.x` |
+| current line | `0.2.x` |
+| public registry | Release candidate; first public npm release pending |
 | React Native surface | TurboModule + JSI installed runtime |
 | Rust crate | `rust/iroh_mobile_bridge` |
 | Iroh crate | `iroh` 1.x |
@@ -24,9 +25,12 @@ yet a stable general-purpose React Native Iroh SDK.
 | Read local node id | Implemented |
 | Dial remote endpoint by node id plus address hint | Implemented |
 | Send/receive framed binary messages | Implemented |
+| Multiple independent streams on one QUIC session | Implemented (`0.2.0`) |
+| Bounded queues and receive backpressure | Implemented (`0.2.0`) |
+| Stream close/error JS notifications | Implemented (`0.2.0`) |
 | Android JNI context initialization | Implemented |
 | iOS xcframework packaging | Implemented |
-| npm package packaging | Implemented |
+| npm package packaging | Implemented; public release pending |
 | Incoming mobile peer server mode | Not exposed |
 | High-level HTTP tunnel | Host app responsibility |
 | App authentication/pairing | Host app responsibility |
@@ -73,3 +77,4 @@ transport when available.
 - Native binary artifact regeneration is still manual.
 - The package is large because it includes iOS and Android native binaries.
 - The API may change before 1.0.
+- Incoming mobile peer/server mode and QUIC datagrams are not exposed yet.

@@ -20,7 +20,7 @@ Completed:
 - React Native TurboModule package.
 - Android `.so` artifacts.
 - iOS `.xcframework` artifact.
-- npm package `@gordo-labs/react-native-iroh`.
+- npm package candidate `@gordo-labs/react-native-iroh`.
 - Music Hub local integration via `file:` dependency.
 - Desktop/mobile tunnel smoke coverage in Music Hub tests.
 - `jhugman/uniffi-bindgen-react-native` documented as the upstream generator
@@ -28,13 +28,17 @@ Completed:
 - `RelayMode::Default` so mobile can dial via n0 relays off-LAN (0.1.2).
 - Build helpers that prefer rustup + auto-detect Homebrew NDK.
 - Real-device Android QA with Music Hub Sovereign playback (2026-07-21).
+- Reused QUIC peer sessions with independent bidirectional streams (`0.2.0`).
+- Bounded native queues, receive backpressure, deterministic stream close, and
+  multicast JavaScript listeners.
+- Public-source CI gates and release artifact validation.
 
-Still required before stable:
+Still required before stable (also tracked in the root README):
 
 - Public example app.
-- Repeatable release procedure for regenerated native artifacts.
+- First public npm release from the documented release procedure.
 - Broader real-device matrix.
-- More CI coverage for package validation.
+- Native regeneration CI and broader package compatibility coverage.
 - API freeze and semver policy.
 
 ## API Surface
@@ -45,14 +49,15 @@ Still required before stable:
 | `nodeId()` | Local Iroh endpoint id after start |
 | `start()` / `stop()` | Endpoint lifecycle |
 | `isRunning()` | Native endpoint state |
-| `connect(nodeId, addressHint)` | Dial a remote Iroh endpoint |
+| `connect(options)` | Open one framed stream on a reused peer session |
+| `openSession(options)` | Own and close several independent streams together |
 | `connection.send(bytes)` | Send one framed binary message |
 | `connection.onMessage(cb)` | Receive framed binary messages |
 | `connection.close()` | Close the native connection |
 
 ## Non-goals
 
-- A full general-purpose Iroh SDK.
+- A wrapper around every Iroh protocol or experimental API.
 - App-level authentication or pairing.
 - Music Hub HTTP tunnel logic.
 - Content storage, blobs, sync, or provider APIs.

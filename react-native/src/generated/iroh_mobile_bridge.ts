@@ -52,7 +52,7 @@ export function close(connectionId: string): void /*throws*/ {uniffiCaller.rustC
     }
 
 /**
- * Dial a remote Iroh node and open a bidirectional framed stream.
+ * Dial or reuse a remote Iroh session and open one bidirectional framed stream.
  */
 export function connect(nodeId: string, alpn: string, addressHint: string | undefined, timeoutMs: number | undefined): string /*throws*/ {
     return ((__rb: Uint8Array) => {
@@ -102,6 +102,20 @@ export function isRunning(): boolean {
     return FfiConverterBool.lift(uniffiCaller.rustCall(
             /*caller:*/ (callStatus) => {
                 return nativeModule().ubrn_uniffi_iroh_mobile_bridge_fn_func_is_running(
+                callStatus);
+            },
+            /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+    ));
+    }
+
+/**
+ * Returns whether a framed stream is still open in the native runtime.
+ */
+export function isStreamOpen(connectionId: string): boolean {
+    return FfiConverterBool.lift(uniffiCaller.rustCall(
+            /*caller:*/ (callStatus) => {
+                return nativeModule().ubrn_uniffi_iroh_mobile_bridge_fn_func_is_stream_open(
+        FfiConverterString.lower(connectionId, nativeModule().rustbuffer_alloc),
                 callStatus);
             },
             /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
@@ -389,7 +403,7 @@ export const IrohBridgeError = (() => {
 
     type OperationFailed__interface = {
         tag: IrohBridgeError_Tags.OperationFailed;
-        inner: 
+        inner:
 Readonly<{message: string}>
     };
     class OperationFailed_ extends UniffiError implements OperationFailed__interface {
@@ -399,7 +413,7 @@ Readonly<{message: string}>
          */
         readonly [uniffiTypeNameSymbol] = "IrohBridgeError";
         readonly tag = IrohBridgeError_Tags.OperationFailed;
-        readonly inner: 
+        readonly inner:
 Readonly<{message: string}>;
         constructor(
 inner: {message: string }) {
@@ -419,7 +433,7 @@ inner: {message: string }): OperationFailed_ {
             return OperationFailed_.instanceOf(obj);
         }
 
-        static getInner(obj: OperationFailed_): 
+        static getInner(obj: OperationFailed_):
 Readonly<{message: string}> {
             return obj.inner;
         }
@@ -459,12 +473,12 @@ Readonly<{message: string}> {
 
     return Object.freeze({
         instanceOf,
-  AlreadyStarted: AlreadyStarted_, 
-  NotStarted: NotStarted_, 
-  NotConnected: NotConnected_, 
-  InvalidNodeId: InvalidNodeId_, 
-  InvalidFrame: InvalidFrame_, 
-  OperationFailed: OperationFailed_, 
+  AlreadyStarted: AlreadyStarted_,
+  NotStarted: NotStarted_,
+  NotConnected: NotConnected_,
+  InvalidNodeId: InvalidNodeId_,
+  InvalidFrame: InvalidFrame_,
+  OperationFailed: OperationFailed_,
   InternalError: InternalError_
     });
 
@@ -600,7 +614,7 @@ function uniffiEnsureInitialized() {
     if (nativeModule().ubrn_uniffi_iroh_mobile_bridge_checksum_func_close() !== 50746) {
         throw new UniffiInternalError.ApiChecksumMismatch("uniffi_iroh_mobile_bridge_checksum_func_close");
     }
-    if (nativeModule().ubrn_uniffi_iroh_mobile_bridge_checksum_func_connect() !== 8623) {
+    if (nativeModule().ubrn_uniffi_iroh_mobile_bridge_checksum_func_connect() !== 61054) {
         throw new UniffiInternalError.ApiChecksumMismatch("uniffi_iroh_mobile_bridge_checksum_func_connect");
     }
     if (nativeModule().ubrn_uniffi_iroh_mobile_bridge_checksum_func_echo_roundtrip() !== 22986) {
@@ -608,6 +622,9 @@ function uniffiEnsureInitialized() {
     }
     if (nativeModule().ubrn_uniffi_iroh_mobile_bridge_checksum_func_is_running() !== 59482) {
         throw new UniffiInternalError.ApiChecksumMismatch("uniffi_iroh_mobile_bridge_checksum_func_is_running");
+    }
+    if (nativeModule().ubrn_uniffi_iroh_mobile_bridge_checksum_func_is_stream_open() !== 2771) {
+        throw new UniffiInternalError.ApiChecksumMismatch("uniffi_iroh_mobile_bridge_checksum_func_is_stream_open");
     }
     if (nativeModule().ubrn_uniffi_iroh_mobile_bridge_checksum_func_next_message() !== 56656) {
         throw new UniffiInternalError.ApiChecksumMismatch("uniffi_iroh_mobile_bridge_checksum_func_next_message");

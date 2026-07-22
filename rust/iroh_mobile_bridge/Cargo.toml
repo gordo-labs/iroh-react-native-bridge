@@ -1,10 +1,16 @@
 [package]
 name = "iroh_mobile_bridge"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 description = "Minimal Iroh surface for React Native (UniFFI + Turbo Module)"
 license = "MIT"
 authors = ["Gordo Labs"]
+repository = "https://github.com/gordo-labs/iroh-react-native-bridge"
+homepage = "https://github.com/gordo-labs/iroh-react-native-bridge"
+readme = "README.md"
+keywords = ["iroh", "react-native", "quic", "p2p"]
+categories = ["network-programming"]
+publish = false
 
 [lib]
 crate-type = ["lib", "cdylib", "staticlib"]

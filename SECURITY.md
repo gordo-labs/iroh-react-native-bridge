@@ -2,8 +2,9 @@
 
 ## Supported Versions
 
-This project is alpha. Security fixes are applied to the latest published
-`0.1.x` package and the active development branch.
+This project is alpha. Until the first public npm release, security fixes are
+applied to the active development branch. After publication, fixes apply to the
+latest public `0.2.x` package and active development branch.
 
 Older alpha versions may not receive backports.
 

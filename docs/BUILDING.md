@@ -32,15 +32,20 @@ cd rust/iroh_mobile_bridge
 cargo test
 ```
 
-## Package Dry Run
+## Source Package Checks
 
 ```bash
 cd react-native
-npm pack --dry-run
+npm ci
+npm run test:source
 ```
 
-This verifies that the npm package includes the expected source, native
-artifacts, podspec, Gradle files, README, and license.
+This runs the JavaScript API tests and verifies that the reusable package does
+not contain host-application protocol or product-specific behavior. It works in
+a clean source checkout where ignored native release binaries are absent.
+
+`npm pack --dry-run` alone does not prove that the ignored iOS and Android
+artifacts exist. Use the release validation below before publication.
 
 ## Regenerate Native Artifacts
 
@@ -53,6 +58,10 @@ npm run ubrn:ios
 npm run ubrn:android
 ```
 
+Both commands are mandatory for releases that add or remove a Rust export. The
+generated TypeScript contains UniFFI contract checksums, so publishing new JS
+against stale `.so`/`.xcframework` binaries is intentionally unsupported.
+
 After regenerating artifacts:
 
 1. Inspect generated source changes.
@@ -61,7 +70,7 @@ After regenerating artifacts:
    generator defects.
 3. Confirm `ReactNativeIrohBridgeFramework.xcframework` exists.
 4. Confirm Android `jniLibs` contains the expected ABIs.
-5. Re-run `npm pack --dry-run`.
+5. Run `npm run verify:release`.
 6. Test in a real React Native app.
 
 ## Local App Integration
@@ -88,14 +97,8 @@ npx expo run:android
 If the package is symlinked, Metro may pick up JS changes without reinstalling,
 but native changes always require a native rebuild.
 
-## Publishing Checklist
+## Publishing
 
-Before publishing a new npm version:
-
-1. Update `react-native/package.json` version.
-2. Update [CHANGELOG.md](../CHANGELOG.md).
-3. Run Rust tests.
-4. Run `npm pack --dry-run` from `react-native/`.
-5. Install the packed tarball in a sample app.
-6. Test iOS and Android native startup.
-7. Tag the release in Git after publish.
+Publication is maintainer-only and is documented separately in
+[RELEASING.md](./RELEASING.md). Never publish from a source-only checkout or
+without both regenerated native artifact sets.

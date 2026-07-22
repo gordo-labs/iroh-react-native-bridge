@@ -1,0 +1,9 @@
+* text=auto eol=lf
+
+*.a binary
+*.aar binary
+*.so binary
+*.xcframework binary
+
+react-native/cpp/generated/** linguist-generated=true
+react-native/src/generated/** linguist-generated=true

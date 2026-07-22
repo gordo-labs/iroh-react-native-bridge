@@ -11,9 +11,9 @@
     "parentSubmodule": "music-hub-parent"
   },
   "package": {
-    "npm": "music-hub-iroh-bridge",
+    "npm": "@gordo-labs/react-native-iroh",
     "directory": "react-native",
-    "status": "published-alpha"
+    "status": "alpha-release-candidate"
   },
   "taskDoc": "TASK.md",
   "workingIndex": "WORKING-INDEX.md",
@@ -22,6 +22,7 @@
     "docs/STATUS.md",
     "docs/ARCHITECTURE.md",
     "docs/BUILDING.md",
+    "docs/RELEASING.md",
     "docs/UPSTREAM.md",
     "docs/TROUBLESHOOTING.md",
     "docs/ROADMAP.md",

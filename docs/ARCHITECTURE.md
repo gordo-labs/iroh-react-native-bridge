@@ -19,11 +19,11 @@ react-native/src/index.js
   v
 UniFFI generated JSI runtime
   |
-  | bridge_version, start, stop, connect, send, next_message, close
+  | bridge_version, start, stop, connect, send, next_message, is_stream_open, close
   v
-rust/iroh_mobile_bridge
+rust/iroh_mobile_bridge (bounded queues + session cache)
   |
-  | iroh Endpoint + QUIC stream
+  | iroh Endpoint + QUIC session + independent streams
   v
 remote Iroh peer
 ```
@@ -38,9 +38,14 @@ Current behavior:
 - Starts with caller-provided ALPNs. If none are provided, it uses the generic
   `iroh-rn/1` default.
 - Requires an addressing hint for mobile dialing.
-- Opens a bidirectional QUIC stream to the remote peer.
+- Reuses one QUIC connection for the same remote peer + ALPN and opens a new
+  bidirectional stream for every `connect()` call.
 - Encodes each app payload as a 4-byte big-endian length plus bytes.
-- Stores received frames in a per-connection inbox consumed by JS polling.
+- Applies a 2 MiB frame limit plus byte-bounded 16 MiB send and receive queues
+  per stream. When either side falls behind, reading/queueing pauses and QUIC
+  flow control propagates backpressure instead of growing memory indefinitely.
+- Keeps at most 32 warm peer sessions and redials a session after transport
+  closure. Dropping a cache entry does not interrupt streams already using it.
 
 The Rust layer does not know about Music Hub users, tokens, sessions, HTTP, or
 pairing. It only moves framed bytes.
@@ -73,7 +78,18 @@ not part of this package.
 - `bridge.connect({ nodeId, alpn, addressHint, timeoutMs })`
 - `connection.send(bytes)`
 - `connection.onMessage(handler)`
+- `connection.onClose(handler)` / `connection.onError(handler)`
 - `connection.close()`
+- `bridge.openSession(options)` / `session.openStream()` for explicit ownership
+  of several independent streams.
+
+`connect()` is backward compatible: it still returns one framed stream. Its
+native implementation now reuses a warm QUIC session, so calling it repeatedly
+does not force application traffic onto one ordered stream.
+
+The JavaScript session object owns streams, not the shared native QUIC handle.
+`session.close()` cancels its streams; the peer session remains reusable until
+LRU eviction or endpoint shutdown, so one feature cannot disconnect siblings.
 
 If native linking fails, `getIrohBridge()` returns an unavailable bridge object.
 Calling `start()` or `connect()` rejects with the underlying native/runtime
@@ -89,6 +105,10 @@ Host apps must provide:
 - Retry and fallback transport policy.
 - User-visible diagnostics.
 - Protocol framing above the raw byte frames.
+
+Opening a second stream does not inherit application authorization from the
+first one. Protocols should authenticate the peer/session and bind every stream
+to that authenticated context according to their own threat model.
 
 For Music Hub, these concerns live in the mobile and desktop app repos, not in
 this bridge package.

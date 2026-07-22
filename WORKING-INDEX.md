@@ -11,6 +11,7 @@ Music Hub, but it is intended to be usable by external React Native apps too.
 | [docs/STATUS.md](./docs/STATUS.md) | Current support matrix and known limits |
 | [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) | Native and JS architecture |
 | [docs/BUILDING.md](./docs/BUILDING.md) | Build and packaging workflow |
+| [docs/RELEASING.md](./docs/RELEASING.md) | Maintainer release and npm publication gate |
 | [docs/UPSTREAM.md](./docs/UPSTREAM.md) | Upstream projects, especially `uniffi-bindgen-react-native` |
 | [docs/TROUBLESHOOTING.md](./docs/TROUBLESHOOTING.md) | Common failures and fixes |
 | [docs/ROADMAP.md](./docs/ROADMAP.md) | Work planned before stable release |
@@ -20,7 +21,7 @@ Music Hub, but it is intended to be usable by external React Native apps too.
 
 | Path | Purpose |
 | --- | --- |
-| [react-native/](./react-native/) | npm package `music-hub-iroh-bridge` |
+| [react-native/](./react-native/) | npm package `@gordo-labs/react-native-iroh` |
 | [rust/iroh_mobile_bridge/](./rust/iroh_mobile_bridge/) | Rust crate and Iroh endpoint implementation |
 | [.github/](./.github/) | CI, issue templates, PR template |
 

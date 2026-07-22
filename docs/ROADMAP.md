@@ -1,6 +1,6 @@
 # Roadmap
 
-## 0.1.x - Alpha
+## 0.1.x - Initial Alpha
 
 - Keep API intentionally small.
 - Prove real-device iOS and Android connectivity.
@@ -8,11 +8,16 @@
 - Add public docs and contribution templates.
 - Stabilize Music Hub dogfood use case.
 
-## 0.2.x - Developer Usability
+## 0.2.x - Multiplexing and Developer Usability
+
+- Reusable peer sessions with independent QUIC streams. ✅
+- Bounded queues, backpressure, and stream cancellation. ✅
+- Logical `openSession()` JavaScript API. ✅
 
 - Add a public example app.
-- Add CI package validation for npm tarball contents.
-- Add smoke tests for generated JS wrapper behavior.
+- CI source/package safety and native release artifact validation. ✅
+- Smoke tests for generated JS wrapper behavior. ✅
+- Repeatable maintainer release procedure and npm provenance metadata. ✅
 - Document exact React Native and Expo version matrix.
 - Add release scripts for native artifact regeneration.
 - Track `uniffi-bindgen-react-native` generator releases and remove local

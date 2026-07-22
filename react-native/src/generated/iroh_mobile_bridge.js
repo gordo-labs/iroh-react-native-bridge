@@ -29,6 +29,7 @@ __export(iroh_mobile_bridge_exports, {
   default: () => iroh_mobile_bridge_default,
   echoRoundtrip: () => echoRoundtrip,
   isRunning: () => isRunning,
+  isStreamOpen: () => isStreamOpen,
   nextMessage: () => nextMessage,
   nodeId: () => nodeId,
   send: () => send,
@@ -125,6 +126,19 @@ function isRunning() {
     /*caller:*/
     (callStatus) => {
       return iroh_mobile_bridge_ffi_default().ubrn_uniffi_iroh_mobile_bridge_fn_func_is_running(
+        callStatus
+      );
+    },
+    /*liftString:*/
+    FfiConverterString.lift.bind(FfiConverterString)
+  ));
+}
+function isStreamOpen(connectionId) {
+  return import_core.FfiConverterBool.lift(uniffiCaller.rustCall(
+    /*caller:*/
+    (callStatus) => {
+      return iroh_mobile_bridge_ffi_default().ubrn_uniffi_iroh_mobile_bridge_fn_func_is_stream_open(
+        FfiConverterString.lower(connectionId, iroh_mobile_bridge_ffi_default().rustbuffer_alloc),
         callStatus
       );
     },
@@ -536,6 +550,9 @@ function uniffiEnsureInitialized() {
   }
   if (iroh_mobile_bridge_ffi_default().ubrn_uniffi_iroh_mobile_bridge_checksum_func_is_running() !== 59482) {
     throw new import_core.UniffiInternalError.ApiChecksumMismatch("uniffi_iroh_mobile_bridge_checksum_func_is_running");
+  }
+  if (iroh_mobile_bridge_ffi_default().ubrn_uniffi_iroh_mobile_bridge_checksum_func_is_stream_open() !== 2771) {
+    throw new import_core.UniffiInternalError.ApiChecksumMismatch("uniffi_iroh_mobile_bridge_checksum_func_is_stream_open");
   }
   if (iroh_mobile_bridge_ffi_default().ubrn_uniffi_iroh_mobile_bridge_checksum_func_next_message() !== 56656) {
     throw new import_core.UniffiInternalError.ApiChecksumMismatch("uniffi_iroh_mobile_bridge_checksum_func_next_message");

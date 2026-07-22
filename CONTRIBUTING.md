@@ -35,13 +35,17 @@ cd rust/iroh_mobile_bridge
 cargo test
 
 cd ../../react-native
-npm pack --dry-run
+npm ci
+npm run test:source
 npm run ubrn:ios
 npm run ubrn:android
+npm run verify:release
 ```
 
 The generated native artifacts are large. If your change does not require a new
-binary artifact, avoid regenerating them.
+binary artifact, avoid regenerating them. `verify:release` is for maintainers
+with both artifact sets present; source-only contributions should run
+`test:source`. See [docs/RELEASING.md](./docs/RELEASING.md).
 
 ## Pull Request Expectations
 

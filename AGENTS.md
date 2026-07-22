@@ -25,8 +25,9 @@ integration.
 
 ## Status
 
-Alpha. The bridge is published and used for controlled Music Hub Iroh testing,
-but the API and packaging are not stable. Keep docs honest about current limits.
+Alpha. The bridge is used for controlled Music Hub Iroh testing and is being
+prepared for its first public npm release, but the API and packaging are not
+stable. Keep docs honest about current limits and release availability.
 
 ## Clone From Parent Checkout
 
