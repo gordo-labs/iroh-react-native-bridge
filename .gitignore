@@ -1,6 +1,10 @@
 /target/
 **/target/
 node_modules/
+**/android/.cxx/
+**/android/build/
+*.tgz
+npm-debug.log*
 *.xcframework
 *.aar
 *.so

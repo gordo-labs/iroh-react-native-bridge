@@ -1,125 +1,82 @@
-# TASK — Iroh React Native bridge (experimental)
-
-**Area:** `iroh-react-native-bridge/` (submodule at Music Hub parent root)  
-**Git:** Independent repository (root = this folder).  
-**Parent:** Music Hub — do not block Sovereign alpha merge.  
-**Created:** 2026-06-04
+# TASK - Iroh React Native Bridge
 
 ## Objective
 
-Build a **standalone** native module so Tape (React Native / Expo) can open an **Iroh encrypted session** without `@number0/iroh` Node NAPI.
+Provide a small, reusable React Native package that lets iOS and Android apps
+open Iroh encrypted sessions without a Node runtime.
 
-Success = device proof: **iOS + Android** round-trip bytes with desktop Iroh or second mobile peer.
+The bridge is intentionally narrow: endpoint lifecycle, node id, outbound
+connection, framed binary send/receive, and clear native-linking errors.
 
-## Why (context)
+## Current Status
 
-Music Hub Agent 02 documented blockers: [IROH-MOBILE-BINDINGS.md](../../working/roadmap/future/decentralized-hub-discovery/IROH-MOBILE-BINDINGS.md).
+Alpha implementation is active.
 
-- `@number0/iroh` → Node only  
-- `n0-computer/iroh-ffi` → Swift/Kotlin reference, no RN, paused maintenance  
-- Alpha shipped **WebRTC** + Supabase bootstrap instead
+Completed:
 
-**Related (not this repo):** hub↔hub collab over Iroh (desktop) — [IROH-HUB-TO-HUB-COLLAB.md](../working/roadmap/future/decentralized-hub-discovery/IROH-HUB-TO-HUB-COLLAB.md).
+- Independent repo and GitHub remote.
+- Rust crate using `iroh` 1.x.
+- UniFFI/JSI generated runtime.
+- React Native TurboModule package.
+- Android `.so` artifacts.
+- iOS `.xcframework` artifact.
+- npm package candidate `@gordo-labs/react-native-iroh`.
+- Music Hub local integration via `file:` dependency.
+- Desktop/mobile tunnel smoke coverage in Music Hub tests.
+- `jhugman/uniffi-bindgen-react-native` documented as the upstream generator
+  and preferred target for generator/runtime fixes.
+- `RelayMode::Default` so mobile can dial via n0 relays off-LAN (0.1.2).
+- Build helpers that prefer rustup + auto-detect Homebrew NDK.
+- Real-device Android QA with Music Hub Sovereign playback (2026-07-21).
+- Reused QUIC peer sessions with independent bidirectional streams (`0.2.0`).
+- Bounded native queues, receive backpressure, deterministic stream close, and
+  multicast JavaScript listeners.
+- Public-source CI gates and release artifact validation.
 
-## Non-goals (this repo)
+Still required before stable (also tracked in the root README):
 
-- Music Hub HTTP tunnel / `session.verify` integration  
-- Global content swarm / torrent index  
-- Replacing `react-native-webrtc` in production Tape  
-- Forking entire `iroh-ffi` Python/JS trees
+- Public example app.
+- First public npm release from the documented release procedure.
+- Broader real-device matrix.
+- Native regeneration CI and broader package compatibility coverage.
+- API freeze and semver policy.
 
-## Proposed layout
-
-```txt
-iroh-react-native-bridge/
-  rust/iroh_mobile_bridge/     # minimal UniFFI crate
-  bindings/                    # generated Swift/Kotlin (ubrn or manual)
-  react-native/                # Turbo Module package @music-hub/iroh-bridge
-  example/                     # bare Expo app smoke test
-  docs/
-  TASK.md
-```
-
-## API surface (v0 spike)
-
-Expose only what Sovereign needs later:
+## API Surface
 
 | Method | Purpose |
 | --- | --- |
-| `nodeId()` | Opaque peer id for presence `transportPeerId` |
+| `bridgeVersion()` | Runtime version diagnostics |
+| `nodeId()` | Local Iroh endpoint id after start |
 | `start()` / `stop()` | Endpoint lifecycle |
-| `connect(addr)` | Dial ticket / node addr |
-| `send(bytes)` / `onMessage(cb)` | Bidi stream for tunnel frames |
+| `isRunning()` | Native endpoint state |
+| `connect(options)` | Open one framed stream on a reused peer session |
+| `openSession(options)` | Own and close several independent streams together |
+| `connection.send(bytes)` | Send one framed binary message |
+| `connection.onMessage(cb)` | Receive framed binary messages |
+| `connection.close()` | Close the native connection |
 
-ALPN / protocol id: align with `experiments/sovereign-remote-transport/src/protocol-alpn.mjs` when integrating.
+## Non-goals
 
-## Phases
+- A wrapper around every Iroh protocol or experimental API.
+- App-level authentication or pairing.
+- Music Hub HTTP tunnel logic.
+- Content storage, blobs, sync, or provider APIs.
+- A hidden fallback that pretends Iroh is connected when native linking failed.
 
-### P0 — Repo bootstrap (this task)
+## Acceptance For 1.0
 
-- [x] Independent `git init` + README + TASK
-- [x] Remote on GitHub `gordo-labs/iroh-react-native-bridge`
-- [x] CI stub: Rust `cargo test` (.github/workflows/ci.yml)
-
-### P1 — Rust + UniFFI smoke (2–3 weeks)
-
-- [x] `Cargo.toml` depends on `iroh` **1.0** (0.35.x was target, 1.0 is current stable as of 2026-06)
-- [x] UniFFI exports: `node_id`, `echo_roundtrip`, `start`, `stop`, `is_running`
-- [x] `cargo test` passes (6 tests: lifecycle, echo, error handling)
-- [x] `cargo build` succeeds on macOS aarch64
-
-### P2 — Native artifacts (2–3 weeks)
-
-- [ ] iOS `.xcframework` via `ubrn` or `cargo-ndk` + scripts
-- [ ] Android `.so` / AAR for arm64 (+ x86_64 sim)
-- [ ] Document rebuild on every `iroh` bump
-
-### P3 — React Native module (2 weeks)
-
-- [ ] Turbo Module / Expo module config
-- [ ] TypeScript types
-- [ ] `example/` app: button → echo test on real device
-
-### P4 — Desktop interoperability (1 week)
-
-- [ ] Connect RN example ↔ `experiments/sovereign-remote-transport` desktop probe
-- [ ] Document NAT/STUN vs Iroh relay behavior
-
-### P5 — Music Hub integration (separate PR in parent repo)
-
-- [ ] Optional dep in `mobile` behind feature flag
-- [ ] `SovereignRouteManager` transport selector `webrtc | iroh`
-- [ ] Security review extension
-
-## Acceptance (experiment done)
-
-1. **Android** physical device: echo ≥ 1 MiB without Node runtime.  
-2. **iOS** physical device: same.  
-3. README: build instructions for EAS prebuild.  
-4. Decision doc: recommend merge / postpone / stay WebRTC-only.
-
-## Risks
-
-| Risk | Mitigation |
-| --- | --- |
-| iroh version drift | Pin crate; monthly bump job |
-| Expo binary size | Measure; optional feature flag |
-| n0 FFI policy pause | Own thin crate; no dependency on archived bindings |
-| Maintenance bus factor | Document rebuild; minimal API |
+1. iOS physical device can connect to a known Iroh peer and exchange at least
+   1 MiB of framed payloads.
+2. Android physical device can do the same.
+3. Example app demonstrates start, node id, connect, send, receive, close.
+4. CI verifies Rust tests and package integrity.
+5. Build docs allow a new contributor to regenerate iOS and Android artifacts.
+6. Public docs state supported React Native, Expo, iOS, Android, and Iroh ranges.
 
 ## References
 
-- [n0-computer/iroh](https://github.com/n0-computer/iroh)
-- [iroh-ffi](https://github.com/n0-computer/iroh-ffi) (patterns only)
-- [FFI updates blog](https://www.iroh.computer/blog/ffi-updates)
-- [UniFFI](https://mozilla.github.io/uniffi-rs/latest/)
-- [uniffi-bindgen-react-native](https://www.npmjs.com/package/uniffi-bindgen-react-native) (evaluate)
-- Music Hub [SOVEREIGN-REMOTE-ARCHITECTURE.md](../../working/roadmap/future/decentralized-hub-discovery/SOVEREIGN-REMOTE-ARCHITECTURE.md)
-
-## Owner / tracking
-
-| Field | Value |
-| --- | --- |
-| Priority | Experimental — after alpha dogfood |
-| Blocks | None on `feature/sovereign-remote-alpha` merge |
-| Parent issue | Sovereign transport — Iroh mobile bridge |
+- Iroh documentation: https://docs.iroh.computer/
+- Iroh repository: https://github.com/n0-computer/iroh
+- UniFFI: https://mozilla.github.io/uniffi-rs/latest/
+- uniffi-bindgen-react-native: https://www.npmjs.com/package/uniffi-bindgen-react-native
+- uniffi-bindgen-react-native repo: https://github.com/jhugman/uniffi-bindgen-react-native

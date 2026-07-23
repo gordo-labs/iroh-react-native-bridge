@@ -1,0 +1,15 @@
+---
+rust:
+  directory: ../rust/iroh_mobile_bridge
+  manifestPath: Cargo.toml
+android:
+  packageName: design.gordo.iroh.reactnative
+  apiLevel: 24
+  useSharedLibrary: true
+ios:
+  frameworkName: ReactNativeIrohBridgeFramework
+bindings:
+  ts: src/generated
+noOverwrite:
+  - src/index.js
+  - src/index.d.ts

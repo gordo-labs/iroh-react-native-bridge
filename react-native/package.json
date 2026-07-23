@@ -1,0 +1,76 @@
+{
+  "name": "@gordo-labs/react-native-iroh",
+  "version": "0.2.0",
+  "description": "Generic React Native TurboModule bridge for Iroh endpoints and framed streams",
+  "homepage": "https://github.com/gordo-labs/iroh-react-native-bridge",
+  "author": "Gordo Labs",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gordo-labs/iroh-react-native-bridge.git",
+    "directory": "react-native"
+  },
+  "bugs": {
+    "url": "https://github.com/gordo-labs/iroh-react-native-bridge/issues"
+  },
+  "main": "src/index.js",
+  "react-native": "src/index.js",
+  "types": "src/index.d.ts",
+  "scripts": {
+    "pack:dry-run": "npm pack --dry-run",
+    "test:js": "node --test test/*.test.cjs",
+    "check:generic": "node scripts/check-generic-package.mjs",
+    "check:generated-format": "node scripts/format-generated.mjs --check",
+    "check:release-artifacts": "node scripts/check-release-package.mjs",
+    "test:source": "npm run test:js && npm run check:generic && npm run check:generated-format",
+    "test:package": "npm run test:source && npm run check:release-artifacts && npm pack --dry-run",
+    "verify:release": "npm run test:package",
+    "prepublishOnly": "npm run verify:release",
+    "format:generated": "node scripts/format-generated.mjs",
+    "ubrn:android": "node scripts/with-native-build-env.mjs --android ubrn build android --release --config ubrn.config.yaml --and-generate && node scripts/patch-ubrn-cmake.mjs && node scripts/patch-ubrn-js.mjs && npm run format:generated",
+    "ubrn:ios": "IPHONEOS_DEPLOYMENT_TARGET=13.0 node scripts/with-native-build-env.mjs ubrn build ios --release --config ubrn.config.yaml --and-generate && node scripts/patch-ubrn-ios.mjs && node scripts/patch-ubrn-cmake.mjs && node scripts/patch-ubrn-js.mjs && npm run format:generated",
+    "ubrn:generate": "ubrn generate jsi turbo-module --config ubrn.config.yaml && node scripts/patch-ubrn-cmake.mjs && node scripts/patch-ubrn-ios.mjs && node scripts/patch-ubrn-js.mjs && npm run format:generated"
+  },
+  "files": [
+    "src",
+    "scripts",
+    "ios",
+    "android/build.gradle",
+    "android/CMakeLists.txt",
+    "android/cpp-adapter.cpp",
+    "android/src/main/AndroidManifest.xml",
+    "android/src/main/AndroidManifestNew.xml",
+    "android/src/main/java",
+    "android/src/main/jniLibs",
+    "cpp",
+    "ubrn.config.yaml",
+    "IrohBridge.podspec",
+    "ReactNativeIrohBridgeFramework.xcframework",
+    "react-native.config.js"
+  ],
+  "keywords": [
+    "react-native",
+    "iroh",
+    "quic",
+    "p2p",
+    "turbomodule",
+    "uniffi"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=22"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "dependencies": {
+    "@ubjs/core": "^0.31.0-3",
+    "uniffi-bindgen-react-native": "^0.31.0-3"
+  },
+  "peerDependencies": {
+    "react-native": ">=0.81"
+  },
+  "overrides": {
+    "brace-expansion": "1.1.16"
+  }
+}

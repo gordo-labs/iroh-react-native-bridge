@@ -1,0 +1,91 @@
+name: Bug report
+description: Report a reproducible bridge, native build, or connection failure.
+title: "[Bug]: "
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for testing the bridge. Please include enough detail for maintainers to reproduce the problem.
+  - type: input
+    id: version
+    attributes:
+      label: Package version or commit
+      placeholder: "@gordo-labs/react-native-iroh@0.2.0 or commit SHA"
+    validations:
+      required: true
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      options:
+        - iOS physical device
+        - iOS simulator
+        - Android physical device
+        - Android emulator
+        - Both
+    validations:
+      required: true
+  - type: input
+    id: rn-version
+    attributes:
+      label: React Native / Expo version
+      placeholder: "React Native 0.81, Expo 54"
+    validations:
+      required: true
+  - type: input
+    id: device
+    attributes:
+      label: Device and OS
+      placeholder: "iPhone 15 iOS 18.5, Pixel 8 Android 15"
+    validations:
+      required: true
+  - type: dropdown
+    id: install-source
+    attributes:
+      label: Install source
+      options:
+        - npm
+        - local file dependency
+        - packed tarball
+        - fork
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Reproduction steps
+      placeholder: |
+        1. Install package...
+        2. Build app...
+        3. Call bridge.start()...
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Include the first native/JS error, not only the final UI state. Remove secrets.
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: address-hint
+    attributes:
+      label: Remote peer/address hint details
+      description: If this is a connection failure, describe how the remote peer address hint was produced. Remove secrets.
+      render: text
+    validations:
+      required: false

@@ -1,0 +1,2 @@
+<!-- Android Gradle Plugin 7.3+ reads the package namespace from build.gradle. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" />

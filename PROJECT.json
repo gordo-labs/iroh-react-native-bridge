@@ -1,20 +1,52 @@
 {
   "name": "iroh-react-native-bridge",
   "slug": "iroh-react-native-bridge",
-  "type": "experiment",
-  "status": "planning",
+  "type": "react-native-native-module",
+  "status": "alpha",
   "parentProject": "music-streaming-hub",
-  "description": "Standalone React Native / Expo native module for minimal Iroh P2P (UniFFI + Turbo Module).",
+  "description": "Standalone React Native TurboModule package for minimal Iroh P2P sessions using a Rust/UniFFI bridge.",
   "repository": {
     "local": "iroh-react-native-bridge",
     "remote": "https://github.com/gordo-labs/iroh-react-native-bridge",
     "parentSubmodule": "music-hub-parent"
   },
+  "package": {
+    "npm": "@gordo-labs/react-native-iroh",
+    "directory": "react-native",
+    "status": "alpha-release-candidate"
+  },
   "taskDoc": "TASK.md",
   "workingIndex": "WORKING-INDEX.md",
+  "publicDocs": [
+    "README.md",
+    "docs/STATUS.md",
+    "docs/ARCHITECTURE.md",
+    "docs/BUILDING.md",
+    "docs/RELEASING.md",
+    "docs/UPSTREAM.md",
+    "docs/TROUBLESHOOTING.md",
+    "docs/ROADMAP.md",
+    "CONTRIBUTING.md",
+    "SECURITY.md"
+  ],
+  "upstream": [
+    {
+      "name": "uniffi-bindgen-react-native",
+      "repository": "https://github.com/jhugman/uniffi-bindgen-react-native",
+      "package": "uniffi-bindgen-react-native",
+      "runtimePackage": "@ubjs/core",
+      "role": "Generates React Native TurboModule/JSI bindings from UniFFI Rust exports."
+    },
+    {
+      "name": "iroh",
+      "repository": "https://github.com/n0-computer/iroh",
+      "package": "iroh",
+      "role": "Rust peer-to-peer networking stack used by the mobile bridge."
+    }
+  ],
   "relatedDocs": [
     "../working/roadmap/future/decentralized-hub-discovery/IROH-MOBILE-BINDINGS.md",
     "../working/roadmap/future/decentralized-hub-discovery/SOVEREIGN-REMOTE-ARCHITECTURE.md",
-    "../experiments/sovereign-remote-transport/TRANSPORT-DECISION.md"
+    "../working/roadmap/future/decentralized-hub-discovery/IROH-RN-IMPLEMENTATION-REVIEW.md"
   ]
 }
