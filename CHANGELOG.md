@@ -5,15 +5,8 @@ versions may still include API or packaging changes.
 
 ## Unreleased
 
-- Added public open-source documentation, support policy, security policy,
-  roadmap, and GitHub contribution templates.
-- Added CI gates for Rust formatting, Clippy, tests, JavaScript package tests,
-  dependency audit, generic-scope validation, and tracked-file safety.
-- Added release validation for npm/Cargo version parity and required iOS and
-  Android native artifacts.
-- Added npm provenance/public-access metadata and a maintainer release procedure.
-- Added the missing Android Gradle Plugin 7.3+ manifest to the package allowlist.
-- Documented that the first public npm release is still pending.
+- First public npm publication of `@gordo-labs/react-native-iroh@0.2.0`
+  (operator gate; not done yet).
 
 ## 0.2.0
 
@@ -26,6 +19,17 @@ versions may still include API or packaging changes.
   multicast message listeners.
 - Added session cache eviction and automatic redial when a cached QUIC session
   has closed.
+- Added public open-source documentation, support policy, security policy,
+  roadmap, and GitHub contribution templates.
+- Added CI gates for Rust formatting, Clippy, tests, JavaScript package tests,
+  dependency audit, generic-scope validation, and tracked-file safety.
+- Added release validation for npm/Cargo version parity and required iOS and
+  Android native artifacts.
+- Added npm provenance/public-access metadata and a maintainer release procedure.
+- Added the missing Android Gradle Plugin 7.3+ manifest to the package allowlist.
+- Merged release candidate to public `main` via
+  [PR #1](https://github.com/gordo-labs/iroh-react-native-bridge/pull/1)
+  (2026-07-23). npm registry publish remains pending.
 
 ## 0.1.2
 

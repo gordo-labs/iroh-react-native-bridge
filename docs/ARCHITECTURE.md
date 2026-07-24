@@ -47,7 +47,7 @@ Current behavior:
 - Keeps at most 32 warm peer sessions and redials a session after transport
   closure. Dropping a cache entry does not interrupt streams already using it.
 
-The Rust layer does not know about Music Hub users, tokens, sessions, HTTP, or
+The Rust layer does not know about users, tokens, app sessions, HTTP, or
 pairing. It only moves framed bytes.
 
 ## React Native Native Layer
@@ -110,5 +110,5 @@ Opening a second stream does not inherit application authorization from the
 first one. Protocols should authenticate the peer/session and bind every stream
 to that authenticated context according to their own threat model.
 
-For Music Hub, these concerns live in the mobile and desktop app repos, not in
-this bridge package.
+These concerns belong in the host application (or a separate protocol package),
+not in this bridge.

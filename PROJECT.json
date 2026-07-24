@@ -3,17 +3,21 @@
   "slug": "iroh-react-native-bridge",
   "type": "react-native-native-module",
   "status": "alpha",
-  "parentProject": "music-streaming-hub",
   "description": "Standalone React Native TurboModule package for minimal Iroh P2P sessions using a Rust/UniFFI bridge.",
+  "lastAction": "2026-07-24T12:00:00Z",
+  "lastActionDescription": "Public docs reframed as product-agnostic; host-app product context belongs in consumer integrations only.",
   "repository": {
     "local": "iroh-react-native-bridge",
     "remote": "https://github.com/gordo-labs/iroh-react-native-bridge",
-    "parentSubmodule": "music-hub-parent"
+    "visibility": "public",
+    "defaultBranch": "main"
   },
   "package": {
     "npm": "@gordo-labs/react-native-iroh",
+    "version": "0.2.0",
     "directory": "react-native",
-    "status": "alpha-release-candidate"
+    "status": "alpha-ready-to-publish",
+    "registry": "pending"
   },
   "taskDoc": "TASK.md",
   "workingIndex": "WORKING-INDEX.md",
@@ -43,10 +47,5 @@
       "package": "iroh",
       "role": "Rust peer-to-peer networking stack used by the mobile bridge."
     }
-  ],
-  "relatedDocs": [
-    "../working/roadmap/future/decentralized-hub-discovery/IROH-MOBILE-BINDINGS.md",
-    "../working/roadmap/future/decentralized-hub-discovery/SOVEREIGN-REMOTE-ARCHITECTURE.md",
-    "../working/roadmap/future/decentralized-hub-discovery/IROH-RN-IMPLEMENTATION-REVIEW.md"
   ]
 }

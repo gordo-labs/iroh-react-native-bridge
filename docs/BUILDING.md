@@ -75,7 +75,8 @@ After regenerating artifacts:
 
 ## Local App Integration
 
-Use a local file dependency while developing:
+From your React Native app, point at this repo's `react-native/` directory while
+developing (adjust the relative path as needed):
 
 ```json
 {

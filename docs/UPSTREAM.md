@@ -61,6 +61,7 @@ before filing upstream issues.
 
 ## Maintenance Rule
 
-Prefer the smallest local workaround that keeps Music Hub moving, then open an
-upstream issue or PR if the fix belongs to the generator/runtime. Do not let this
-repo quietly accumulate permanent generated-code patches without documentation.
+Prefer the smallest local workaround that unblocks mobile Iroh dialing, then
+open an upstream issue or PR if the fix belongs to the generator/runtime. Do
+not let this repo quietly accumulate permanent generated-code patches without
+documentation.

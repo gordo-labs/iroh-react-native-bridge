@@ -1,7 +1,7 @@
 # iroh-react-native-bridge - Working Index
 
-Standalone React Native native-module repo. It is mounted as a submodule inside
-Music Hub, but it is intended to be usable by external React Native apps too.
+Standalone React Native native-module repository. Public docs describe a
+generic Iroh transport package for any React Native app.
 
 ## Start Here
 
@@ -25,25 +25,14 @@ Music Hub, but it is intended to be usable by external React Native apps too.
 | [rust/iroh_mobile_bridge/](./rust/iroh_mobile_bridge/) | Rust crate and Iroh endpoint implementation |
 | [.github/](./.github/) | CI, issue templates, PR template |
 
-## Music Hub Parent Context
-
-These links work when this repo is checked out inside the Music Hub parent
-workspace.
-
-| Doc | Purpose |
-| --- | --- |
-| [../DOCS-MAP.md](../DOCS-MAP.md) | Hub-wide navigation |
-| [../working/roadmap/future/decentralized-hub-discovery/IROH-MOBILE-BINDINGS.md](../working/roadmap/future/decentralized-hub-discovery/IROH-MOBILE-BINDINGS.md) | Original mobile Iroh research |
-| [../working/roadmap/future/decentralized-hub-discovery/SOVEREIGN-REMOTE-ARCHITECTURE.md](../working/roadmap/future/decentralized-hub-discovery/SOVEREIGN-REMOTE-ARCHITECTURE.md) | Music Hub Sovereign Remote architecture |
-| [../working/roadmap/future/decentralized-hub-discovery/IROH-RN-IMPLEMENTATION-REVIEW.md](../working/roadmap/future/decentralized-hub-discovery/IROH-RN-IMPLEMENTATION-REVIEW.md) | Integration review and lessons learned |
-
 ## Git
 
-- Remote: https://github.com/gordo-labs/iroh-react-native-bridge
-- Main development branch during alpha: `epic/react-native-package`
-- Production/open-source release branch target: `main`
+- Remote: https://github.com/gordo-labs/iroh-react-native-bridge (public)
+- Default / release branch: `main` (PR #1 merged 2026-07-23)
+- Package line ready to publish: `@gordo-labs/react-native-iroh@0.2.0` (npm pending)
 
 ```bash
 git status --short --branch
 git fetch origin
+git switch main
 ```

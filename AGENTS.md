@@ -1,7 +1,9 @@
 # AGENTS.md - iroh-react-native-bridge
 
-Independent Git repository, mounted as a submodule at the Music Hub parent root
-under `iroh-react-native-bridge/`.
+Standalone Git repository for a **generic** React Native Iroh bridge. Public
+docs, package naming, examples, and CI must stay product-agnostic. Host-app
+integration (pairing, auth, tunnels, UI) belongs in consumer applications, not
+here.
 
 ## Every Session
 
@@ -13,26 +15,25 @@ under `iroh-react-native-bridge/`.
 
 ## Scope
 
-This repo owns the reusable React Native Iroh bridge:
+This repo owns only:
 
 - Rust crate in `rust/iroh_mobile_bridge/`.
-- npm package in `react-native/`.
+- npm package in `react-native/` (`@gordo-labs/react-native-iroh`).
 - Public open-source docs, CI, issue templates, and contribution process.
 
-Music Hub app integration lives in the parent `mobile/` and `desktop/` repos.
-Do not edit those repos from here unless the task explicitly asks for app
-integration.
+Do not add product-specific protocols, branding, or integration guides for a
+single consumer app. Keep the JavaScript/Rust API and docs reusable by any
+React Native team.
 
 ## Status
 
-Alpha. The bridge is used for controlled Music Hub Iroh testing and is being
-prepared for its first public npm release, but the API and packaging are not
-stable. Keep docs honest about current limits and release availability.
+Alpha. Public source is on `main` (`0.2.0`). First npm publish of
+`@gordo-labs/react-native-iroh` is still pending. API and packaging are not
+stable before 1.0 — keep docs honest about current limits and registry status.
 
-## Clone From Parent Checkout
+## Clone
 
 ```bash
-git clone --recurse-submodules https://github.com/gordo-labs/music-hub-parent.git
-# or after clone:
-git submodule update --init iroh-react-native-bridge
+git clone https://github.com/gordo-labs/iroh-react-native-bridge.git
+cd iroh-react-native-bridge
 ```

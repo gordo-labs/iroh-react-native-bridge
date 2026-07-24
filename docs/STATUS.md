@@ -10,10 +10,11 @@ yet a stable general-purpose React Native Iroh SDK.
 | Field | Value |
 | --- | --- |
 | npm package | `@gordo-labs/react-native-iroh` |
-| current line | `0.2.x` |
-| public registry | Release candidate; first public npm release pending |
-| React Native surface | TurboModule + JSI installed runtime |
-| Rust crate | `rust/iroh_mobile_bridge` |
+| current line | `0.2.0` |
+| GitHub | Public (`main`, PR #1 merged 2026-07-23, CI green) |
+| public registry | Not published yet — first npm release pending |
+| React Native surface | TurboModule + JSI installed runtime (`react-native` >= 0.81) |
+| Rust crate | `rust/iroh_mobile_bridge` `0.2.0` |
 | Iroh crate | `iroh` 1.x |
 | License | MIT |
 
@@ -30,13 +31,13 @@ yet a stable general-purpose React Native Iroh SDK.
 | Stream close/error JS notifications | Implemented (`0.2.0`) |
 | Android JNI context initialization | Implemented |
 | iOS xcframework packaging | Implemented |
-| npm package packaging | Implemented; public release pending |
+| npm package packaging | Implemented on `main`; npm registry publish pending |
 | Incoming mobile peer server mode | Not exposed |
 | High-level HTTP tunnel | Host app responsibility |
 | App authentication/pairing | Host app responsibility |
 | Public example app | Not yet |
 | Off-LAN dial via n0 default relays | Implemented (`RelayMode::Default`, 0.1.2) |
-| Music Hub Android device QA (connect + stream) | Verified 2026-07-21 against hub on iroh 1.x prod relays |
+| Physical-device Android dial + framed stream QA | Verified 2026-07-21 against an iroh 1.x peer on n0 prod relays |
 
 ## Platform Notes
 

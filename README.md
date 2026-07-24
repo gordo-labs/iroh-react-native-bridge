@@ -3,17 +3,17 @@
 React Native bridge for opening minimal [Iroh](https://www.iroh.computer/) peer
 connections from iOS and Android apps.
 
-The intended public package is:
+Public package name:
 
 ```bash
 npm install @gordo-labs/react-native-iroh
 ```
 
-The source and package are currently an **alpha release candidate**. The
-`0.2.0` package is not yet available from the public npm registry, so do not
-depend on the install command above until the first public release is listed on
-npm. Maintainers and integrators can use the local package while validating the
-release:
+**Current line: `0.2.0` (alpha).** Source lives on public `main` after
+[PR #1](https://github.com/gordo-labs/iroh-react-native-bridge/pull/1). The npm
+package is **not published yet** — the install command above will fail until
+the first registry release. Until then, depend on a local checkout of this
+repo's `react-native/` directory:
 
 ```json
 {
@@ -23,9 +23,9 @@ release:
 }
 ```
 
-This repository is independent from Iroh/n0. It is maintained by Gordo Labs for
-Music Hub and shared as open source so other React Native teams can test,
-review, and help harden the mobile Iroh path.
+This repository is independent from Iroh/n0. It is maintained by Gordo Labs and
+published as open source for any React Native team that needs a small mobile
+Iroh transport surface.
 
 The React Native binding layer is built with
 [jhugman/uniffi-bindgen-react-native](https://github.com/jhugman/uniffi-bindgen-react-native),
@@ -33,23 +33,38 @@ the maintained UniFFI-to-TypeScript/TurboModule generator used by this package.
 
 ## Status
 
-Alpha. The bridge is usable for controlled device testing, but the API and
-native packaging may still change before a stable 1.0 release.
+Alpha. Usable for controlled device testing. API and native packaging may still
+change before a stable 1.0.
+
+| Gate | State |
+| --- | --- |
+| Package (`@gordo-labs/react-native-iroh` `0.2.0`) | Ready on `main` |
+| Public GitHub repo | Done |
+| PR #1 release prep merged to `main` | Done (2026-07-23) |
+| CI on `main` | Green |
+| Native iOS xcframework + Android `.so` artifacts in tree | Present |
+| Physical-device dial + framed stream QA (Android, n0 relays) | Verified 2026-07-21 |
+| First public npm publish | **Pending** |
+| npm trusted publishing / org token for `gordo-labs` | **Pending** |
+| Signed GitHub release tag `v0.2.0` | **Pending** |
+| Standalone public example app | Not yet |
 
 What works today:
 
-- Rust crate using `iroh` 1.x.
+- Rust crate using `iroh` 1.x with `RelayMode::Default` (off-LAN dials via n0
+  relays).
 - React Native TurboModule package for iOS and Android.
-- iOS `xcframework` and Android `.so` artifacts are included in the npm package.
+- iOS `xcframework` and Android `.so` artifacts included in the npm package
+  layout.
 - Minimal endpoint lifecycle: `start`, `stop`, `isRunning`, `nodeId`.
-- Outbound QUIC connection to a remote Iroh endpoint using an advertised address
-  hint.
+- Outbound QUIC connection using an advertised address hint.
 - Length-prefixed binary frame send/receive for an app-level tunnel.
-- Multiple independent streams over a reused QUIC peer session.
+- Multiple independent streams over a reused QUIC peer session (`openSession` /
+  `openStream`; `connect()` still works and reuses the same session).
 - Bounded native queues, receive backpressure, ordered JS sends, and explicit
   stream close/error notifications.
 - Android JNI context setup for Iroh DNS/network support.
-- Local tests for Rust lifecycle/framing and Music Hub tunnel integration.
+- Local Rust lifecycle/framing tests and JavaScript wrapper tests.
 
 Known limits:
 
@@ -57,8 +72,12 @@ Known limits:
 - No public example app is included yet.
 - Incoming mobile server mode is not exposed.
 - The current JS API is callback/poll based and intentionally small.
-- Real-device NAT/relay behavior still needs more external reports.
-- The package is developed against modern React Native/TurboModule builds.
+- Broader NAT/relay reports from external apps are still needed.
+- Targets modern React Native New Architecture / TurboModule builds (`>=0.81`).
+
+Host apps own pairing, identity, authentication, discovery, retries, and any
+higher-level protocol (HTTP tunnels, RPC, media, UI). This package only moves
+framed bytes over Iroh.
 
 See [docs/STATUS.md](./docs/STATUS.md) for the detailed support matrix.
 
@@ -75,7 +94,7 @@ iroh-react-native-bridge/
 ## API Preview
 
 ```ts
-import { getIrohBridge } from '@gordo-labs/react-native-iroh';
+import { getIrohBridge } from '@gordo-labs/react-native-iroh'
 
 const bridge = getIrohBridge();
 if (!bridge) {
@@ -105,7 +124,7 @@ await bridge.stop();
 ```
 
 For backward compatibility, `bridge.connect(options)` still returns one framed
-stream. Repeated calls for the same node id and ALPN now reuse the same native
+stream. Repeated calls for the same node id and ALPN reuse the same native
 QUIC session automatically.
 
 `addressHint` is required for mobile dialing today. It can be a direct address
@@ -150,27 +169,28 @@ Do not report security issues in public GitHub issues. See
 
 ## Open-source Release Readiness
 
-Repository-level release safeguards are in place:
+Already in place on `main`:
 
-- Rust formatting, Clippy and tests run in CI.
-- JavaScript wrapper tests, generic-scope validation and npm audit run in CI.
-- Release validation fails if iOS or Android native artifacts are absent, too
-  small, or out of version sync with the Rust crate.
-- `npm publish` runs the complete release check automatically and requests
-  public access plus npm provenance.
-- Tracked-file safety checks reject common credentials, private keys, `.env`
-  files and generated archives.
+- [x] Public GitHub repository with anonymous clone access.
+- [x] Release-candidate package merged to `main` ([PR #1](https://github.com/gordo-labs/iroh-react-native-bridge/pull/1)).
+- [x] Rust formatting, Clippy and tests in CI.
+- [x] JavaScript wrapper tests, generic-scope validation and npm audit in CI.
+- [x] Release validation fails if iOS/Android native artifacts are absent, too
+      small, or out of version sync with the Rust crate.
+- [x] `npm publish` runs the complete release check and requests public access
+      plus npm provenance.
+- [x] Tracked-file safety checks reject common credentials, private keys, `.env`
+      files and generated archives.
 
-Operator gates before the first public release:
+Operator gates before the first public npm release (`0.2.0`):
 
-- [ ] Make the GitHub repository public and confirm anonymous clone access.
-- [ ] Merge the reviewed release candidate into `main` with green CI.
 - [ ] Configure npm trusted publishing or a least-privilege automation token for
       the `gordo-labs` scope.
 - [ ] Run the physical-device iOS and Android release checklist in
-      [docs/RELEASING.md](./docs/RELEASING.md).
-- [ ] Publish the verified tarball, create the matching signed Git tag and attach
-      checksums to the GitHub release.
+      [docs/RELEASING.md](./docs/RELEASING.md) against the packed tarball.
+- [ ] `npm publish --access public --provenance` from `react-native/`.
+- [ ] Create the matching signed Git tag `v0.2.0` and attach checksums to the
+      GitHub release.
 
 Non-critical follow-up tasks:
 

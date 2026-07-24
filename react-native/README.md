@@ -13,15 +13,26 @@ and use `@ubjs/core` at runtime.
 
 ## Install
 
+Package line on `main`: `0.2.0` (alpha). Source is public; the npm registry
+listing is not published yet.
+
 After the first public npm release:
 
 ```bash
 npm install @gordo-labs/react-native-iroh
 ```
 
-Until then, use the repository checkout as a local `file:` dependency. The
-package is an alpha release candidate and is not currently listed in the public
-npm registry.
+Until then, point your app at this package directory from a clone of
+[iroh-react-native-bridge](https://github.com/gordo-labs/iroh-react-native-bridge)
+(adjust the relative path as needed):
+
+```json
+{
+  "dependencies": {
+    "@gordo-labs/react-native-iroh": "file:../iroh-react-native-bridge/react-native"
+  }
+}
+```
 
 iOS:
 

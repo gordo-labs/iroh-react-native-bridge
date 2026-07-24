@@ -6,37 +6,45 @@ Provide a small, reusable React Native package that lets iOS and Android apps
 open Iroh encrypted sessions without a Node runtime.
 
 The bridge is intentionally narrow: endpoint lifecycle, node id, outbound
-connection, framed binary send/receive, and clear native-linking errors.
+connection, framed binary send/receive, and clear native-linking errors. It is
+product-agnostic — host apps own pairing, auth, discovery, and higher-level
+protocols.
 
 ## Current Status
 
-Alpha implementation is active.
+Alpha. Public source is on `main`; first npm publish is the remaining release
+gate for `0.2.0`.
 
 Completed:
 
-- Independent repo and GitHub remote.
+- Independent public GitHub repo (`gordo-labs/iroh-react-native-bridge`).
 - Rust crate using `iroh` 1.x.
 - UniFFI/JSI generated runtime.
 - React Native TurboModule package.
-- Android `.so` artifacts.
-- iOS `.xcframework` artifact.
-- npm package candidate `@gordo-labs/react-native-iroh`.
-- Music Hub local integration via `file:` dependency.
-- Desktop/mobile tunnel smoke coverage in Music Hub tests.
+- Android `.so` artifacts (4 ABIs) and iOS `.xcframework`.
+- Package line `@gordo-labs/react-native-iroh@0.2.0` on `main`.
+- Local `file:` dependency path for app developers validating a checkout.
 - `jhugman/uniffi-bindgen-react-native` documented as the upstream generator
   and preferred target for generator/runtime fixes.
 - `RelayMode::Default` so mobile can dial via n0 relays off-LAN (0.1.2).
 - Build helpers that prefer rustup + auto-detect Homebrew NDK.
-- Real-device Android QA with Music Hub Sovereign playback (2026-07-21).
+- Real-device Android QA: dial + framed stream over n0 relays (2026-07-21).
 - Reused QUIC peer sessions with independent bidirectional streams (`0.2.0`).
 - Bounded native queues, receive backpressure, deterministic stream close, and
   multicast JavaScript listeners.
 - Public-source CI gates and release artifact validation.
+- [PR #1](https://github.com/gordo-labs/iroh-react-native-bridge/pull/1) merged
+  to `main` with green CI (2026-07-23).
 
-Still required before stable (also tracked in the root README):
+Still required for the first public release (`0.2.0`):
+
+- npm trusted publishing / org token for the `gordo-labs` scope.
+- Physical-device release checklist against the packed tarball.
+- `npm publish` + signed tag `v0.2.0` + GitHub release checksums.
+
+Still required before stable 1.0:
 
 - Public example app.
-- First public npm release from the documented release procedure.
 - Broader real-device matrix.
 - Native regeneration CI and broader package compatibility coverage.
 - API freeze and semver policy.
@@ -59,9 +67,10 @@ Still required before stable (also tracked in the root README):
 
 - A wrapper around every Iroh protocol or experimental API.
 - App-level authentication or pairing.
-- Music Hub HTTP tunnel logic.
+- HTTP / RPC tunneling (belongs in the host app or a separate package).
 - Content storage, blobs, sync, or provider APIs.
 - A hidden fallback that pretends Iroh is connected when native linking failed.
+- Product-specific branding or integration docs for a single consumer app.
 
 ## Acceptance For 1.0
 
