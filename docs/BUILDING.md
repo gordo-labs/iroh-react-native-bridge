@@ -75,8 +75,11 @@ After regenerating artifacts:
 
 ## Local App Integration
 
+`file:` dependencies are only for local bridge development against a checkout.
+Published consumers should use `npm install @gordo-labs/react-native-iroh`.
+
 From your React Native app, point at this repo's `react-native/` directory while
-developing (adjust the relative path as needed):
+hacking on the package (adjust the relative path as needed):
 
 ```json
 {

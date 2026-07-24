@@ -3,25 +3,17 @@
 React Native bridge for opening minimal [Iroh](https://www.iroh.computer/) peer
 connections from iOS and Android apps.
 
-Public package name:
+Public package:
 
 ```bash
 npm install @gordo-labs/react-native-iroh
 ```
 
-**Current line: `0.2.0` (alpha).** Source lives on public `main` after
-[PR #1](https://github.com/gordo-labs/iroh-react-native-bridge/pull/1). The npm
-package is **not published yet** — the install command above will fail until
-the first registry release. Until then, depend on a local checkout of this
-repo's `react-native/` directory:
-
-```json
-{
-  "dependencies": {
-    "@gordo-labs/react-native-iroh": "file:../iroh-react-native-bridge/react-native"
-  }
-}
-```
+**Current line: `0.2.0` (alpha).** Source is on public `main` after
+[PR #1](https://github.com/gordo-labs/iroh-react-native-bridge/pull/1). The first
+npm registry release is still pending — until it lands, `npm install` will not
+resolve yet. Contributors linking a local checkout should follow
+[docs/BUILDING.md](./docs/BUILDING.md#local-app-integration).
 
 This repository is independent from Iroh/n0. It is maintained by Gordo Labs and
 published as open source for any React Native team that needs a small mobile

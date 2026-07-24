@@ -23,7 +23,8 @@ Completed:
 - React Native TurboModule package.
 - Android `.so` artifacts (4 ABIs) and iOS `.xcframework`.
 - Package line `@gordo-labs/react-native-iroh@0.2.0` on `main`.
-- Local `file:` dependency path for app developers validating a checkout.
+- Local checkout validation path documented for bridge contributors (`file:`
+  only in [docs/BUILDING.md](./docs/BUILDING.md); consumers use npm).
 - `jhugman/uniffi-bindgen-react-native` documented as the upstream generator
   and preferred target for generator/runtime fixes.
 - `RelayMode::Default` so mobile can dial via n0 relays off-LAN (0.1.2).
