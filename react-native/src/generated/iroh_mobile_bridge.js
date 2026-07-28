@@ -2,7 +2,6 @@ var __defProp = Object.defineProperty;
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
 var __getOwnPropNames = Object.getOwnPropertyNames;
 var __hasOwnProp = Object.prototype.hasOwnProperty;
-var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
 var __export = (target, all) => {
   for (var name in all)
     __defProp(target, name, { get: all[name], enumerable: true });
@@ -16,7 +15,6 @@ var __copyProps = (to, from, except, desc) => {
   return to;
 };
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
-var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/generated/iroh_mobile_bridge.ts
 var iroh_mobile_bridge_exports = {};
@@ -26,6 +24,7 @@ __export(iroh_mobile_bridge_exports, {
   bridgeVersion: () => bridgeVersion,
   close: () => close,
   connect: () => connect,
+  connectTarget: () => connectTarget,
   default: () => iroh_mobile_bridge_default,
   echoRoundtrip: () => echoRoundtrip,
   isRunning: () => isRunning,
@@ -45,6 +44,11 @@ var iroh_mobile_bridge_ffi_default = getter;
 // src/generated/iroh_mobile_bridge.ts
 var import_core = require("@ubjs/core");
 var uniffiCaller = new import_core.UniffiRustCaller(() => ({ code: 0 }));
+var uniffiIsDebug = (
+  // @ts-ignore -- The process global might not be defined
+  typeof process !== "object" || // @ts-ignore -- The process global might not be defined
+  process?.env?.NODE_ENV !== "production" || false
+);
 function bridgeVersion() {
   return ((__rb) => {
     try {
@@ -94,6 +98,33 @@ function connect(nodeId2, alpn, addressHint, timeoutMs) {
         FfiConverterString.lower(nodeId2, iroh_mobile_bridge_ffi_default().rustbuffer_alloc),
         FfiConverterString.lower(alpn, iroh_mobile_bridge_ffi_default().rustbuffer_alloc),
         FfiConverterOptionalString.lower(addressHint, iroh_mobile_bridge_ffi_default().rustbuffer_alloc),
+        FfiConverterOptionalUInt32.lower(timeoutMs, iroh_mobile_bridge_ffi_default().rustbuffer_alloc),
+        callStatus
+      );
+    },
+    /*liftString:*/
+    FfiConverterString.lift.bind(FfiConverterString)
+  ));
+}
+function connectTarget(targetKind, nodeId2, endpointTicket, directAddresses, relayUrl, alpn, timeoutMs) {
+  return ((__rb) => {
+    try {
+      return FfiConverterString.lift(__rb);
+    } finally {
+      iroh_mobile_bridge_ffi_default().rustbuffer_free(__rb);
+    }
+  })(uniffiCaller.rustCallWithError(
+    /*liftError:*/
+    FfiConverterTypeIrohBridgeError.lift.bind(FfiConverterTypeIrohBridgeError),
+    /*caller:*/
+    (callStatus) => {
+      return iroh_mobile_bridge_ffi_default().ubrn_uniffi_iroh_mobile_bridge_fn_func_connect_target(
+        FfiConverterString.lower(targetKind, iroh_mobile_bridge_ffi_default().rustbuffer_alloc),
+        FfiConverterOptionalString.lower(nodeId2, iroh_mobile_bridge_ffi_default().rustbuffer_alloc),
+        FfiConverterOptionalString.lower(endpointTicket, iroh_mobile_bridge_ffi_default().rustbuffer_alloc),
+        FfiConverterOptionalSequenceString.lower(directAddresses, iroh_mobile_bridge_ffi_default().rustbuffer_alloc),
+        FfiConverterOptionalString.lower(relayUrl, iroh_mobile_bridge_ffi_default().rustbuffer_alloc),
+        FfiConverterString.lower(alpn, iroh_mobile_bridge_ffi_default().rustbuffer_alloc),
         FfiConverterOptionalUInt32.lower(timeoutMs, iroh_mobile_bridge_ffi_default().rustbuffer_alloc),
         callStatus
       );
@@ -267,22 +298,24 @@ var IrohBridgeError_Tags = /* @__PURE__ */ ((IrohBridgeError_Tags2) => {
   IrohBridgeError_Tags2["NotStarted"] = "NotStarted";
   IrohBridgeError_Tags2["NotConnected"] = "NotConnected";
   IrohBridgeError_Tags2["InvalidNodeId"] = "InvalidNodeId";
+  IrohBridgeError_Tags2["InvalidAddress"] = "InvalidAddress";
+  IrohBridgeError_Tags2["InvalidTicket"] = "InvalidTicket";
+  IrohBridgeError_Tags2["InvalidDialTarget"] = "InvalidDialTarget";
   IrohBridgeError_Tags2["InvalidFrame"] = "InvalidFrame";
   IrohBridgeError_Tags2["OperationFailed"] = "OperationFailed";
   IrohBridgeError_Tags2["InternalError"] = "InternalError";
   return IrohBridgeError_Tags2;
 })(IrohBridgeError_Tags || {});
 var IrohBridgeError = (() => {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n;
-  class AlreadyStarted_ extends (_b = import_core.UniffiError, _a = import_core.uniffiTypeNameSymbol, _b) {
+  class AlreadyStarted_ extends import_core.UniffiError {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    [import_core.uniffiTypeNameSymbol] = "IrohBridgeError";
+    tag = "AlreadyStarted" /* AlreadyStarted */;
     constructor() {
       super("IrohBridgeError", "AlreadyStarted");
-      /**
-       * @private
-       * This field is private and should not be used, use `tag` instead.
-       */
-      __publicField(this, _a, "IrohBridgeError");
-      __publicField(this, "tag", "AlreadyStarted" /* AlreadyStarted */);
     }
     static new() {
       return new AlreadyStarted_();
@@ -294,15 +327,15 @@ var IrohBridgeError = (() => {
       return false;
     }
   }
-  class NotStarted_ extends (_d = import_core.UniffiError, _c = import_core.uniffiTypeNameSymbol, _d) {
+  class NotStarted_ extends import_core.UniffiError {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    [import_core.uniffiTypeNameSymbol] = "IrohBridgeError";
+    tag = "NotStarted" /* NotStarted */;
     constructor() {
       super("IrohBridgeError", "NotStarted");
-      /**
-       * @private
-       * This field is private and should not be used, use `tag` instead.
-       */
-      __publicField(this, _c, "IrohBridgeError");
-      __publicField(this, "tag", "NotStarted" /* NotStarted */);
     }
     static new() {
       return new NotStarted_();
@@ -314,15 +347,15 @@ var IrohBridgeError = (() => {
       return false;
     }
   }
-  class NotConnected_ extends (_f = import_core.UniffiError, _e = import_core.uniffiTypeNameSymbol, _f) {
+  class NotConnected_ extends import_core.UniffiError {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    [import_core.uniffiTypeNameSymbol] = "IrohBridgeError";
+    tag = "NotConnected" /* NotConnected */;
     constructor() {
       super("IrohBridgeError", "NotConnected");
-      /**
-       * @private
-       * This field is private and should not be used, use `tag` instead.
-       */
-      __publicField(this, _e, "IrohBridgeError");
-      __publicField(this, "tag", "NotConnected" /* NotConnected */);
     }
     static new() {
       return new NotConnected_();
@@ -334,15 +367,15 @@ var IrohBridgeError = (() => {
       return false;
     }
   }
-  class InvalidNodeId_ extends (_h = import_core.UniffiError, _g = import_core.uniffiTypeNameSymbol, _h) {
+  class InvalidNodeId_ extends import_core.UniffiError {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    [import_core.uniffiTypeNameSymbol] = "IrohBridgeError";
+    tag = "InvalidNodeId" /* InvalidNodeId */;
     constructor() {
       super("IrohBridgeError", "InvalidNodeId");
-      /**
-       * @private
-       * This field is private and should not be used, use `tag` instead.
-       */
-      __publicField(this, _g, "IrohBridgeError");
-      __publicField(this, "tag", "InvalidNodeId" /* InvalidNodeId */);
     }
     static new() {
       return new InvalidNodeId_();
@@ -354,15 +387,90 @@ var IrohBridgeError = (() => {
       return false;
     }
   }
-  class InvalidFrame_ extends (_j = import_core.UniffiError, _i = import_core.uniffiTypeNameSymbol, _j) {
+  class InvalidAddress_ extends import_core.UniffiError {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    [import_core.uniffiTypeNameSymbol] = "IrohBridgeError";
+    tag = "InvalidAddress" /* InvalidAddress */;
+    inner;
+    constructor(inner) {
+      super("IrohBridgeError", "InvalidAddress");
+      this.inner = Object.freeze(inner);
+    }
+    static new(inner) {
+      return new InvalidAddress_(inner);
+    }
+    static instanceOf(obj) {
+      return obj.tag === "InvalidAddress" /* InvalidAddress */;
+    }
+    static hasInner(obj) {
+      return InvalidAddress_.instanceOf(obj);
+    }
+    static getInner(obj) {
+      return obj.inner;
+    }
+  }
+  class InvalidTicket_ extends import_core.UniffiError {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    [import_core.uniffiTypeNameSymbol] = "IrohBridgeError";
+    tag = "InvalidTicket" /* InvalidTicket */;
+    inner;
+    constructor(inner) {
+      super("IrohBridgeError", "InvalidTicket");
+      this.inner = Object.freeze(inner);
+    }
+    static new(inner) {
+      return new InvalidTicket_(inner);
+    }
+    static instanceOf(obj) {
+      return obj.tag === "InvalidTicket" /* InvalidTicket */;
+    }
+    static hasInner(obj) {
+      return InvalidTicket_.instanceOf(obj);
+    }
+    static getInner(obj) {
+      return obj.inner;
+    }
+  }
+  class InvalidDialTarget_ extends import_core.UniffiError {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    [import_core.uniffiTypeNameSymbol] = "IrohBridgeError";
+    tag = "InvalidDialTarget" /* InvalidDialTarget */;
+    inner;
+    constructor(inner) {
+      super("IrohBridgeError", "InvalidDialTarget");
+      this.inner = Object.freeze(inner);
+    }
+    static new(inner) {
+      return new InvalidDialTarget_(inner);
+    }
+    static instanceOf(obj) {
+      return obj.tag === "InvalidDialTarget" /* InvalidDialTarget */;
+    }
+    static hasInner(obj) {
+      return InvalidDialTarget_.instanceOf(obj);
+    }
+    static getInner(obj) {
+      return obj.inner;
+    }
+  }
+  class InvalidFrame_ extends import_core.UniffiError {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    [import_core.uniffiTypeNameSymbol] = "IrohBridgeError";
+    tag = "InvalidFrame" /* InvalidFrame */;
     constructor() {
       super("IrohBridgeError", "InvalidFrame");
-      /**
-       * @private
-       * This field is private and should not be used, use `tag` instead.
-       */
-      __publicField(this, _i, "IrohBridgeError");
-      __publicField(this, "tag", "InvalidFrame" /* InvalidFrame */);
     }
     static new() {
       return new InvalidFrame_();
@@ -374,16 +482,16 @@ var IrohBridgeError = (() => {
       return false;
     }
   }
-  class OperationFailed_ extends (_l = import_core.UniffiError, _k = import_core.uniffiTypeNameSymbol, _l) {
+  class OperationFailed_ extends import_core.UniffiError {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    [import_core.uniffiTypeNameSymbol] = "IrohBridgeError";
+    tag = "OperationFailed" /* OperationFailed */;
+    inner;
     constructor(inner) {
       super("IrohBridgeError", "OperationFailed");
-      /**
-       * @private
-       * This field is private and should not be used, use `tag` instead.
-       */
-      __publicField(this, _k, "IrohBridgeError");
-      __publicField(this, "tag", "OperationFailed" /* OperationFailed */);
-      __publicField(this, "inner");
       this.inner = Object.freeze(inner);
     }
     static new(inner) {
@@ -399,15 +507,15 @@ var IrohBridgeError = (() => {
       return obj.inner;
     }
   }
-  class InternalError_ extends (_n = import_core.UniffiError, _m = import_core.uniffiTypeNameSymbol, _n) {
+  class InternalError_ extends import_core.UniffiError {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    [import_core.uniffiTypeNameSymbol] = "IrohBridgeError";
+    tag = "InternalError" /* InternalError */;
     constructor() {
       super("IrohBridgeError", "InternalError");
-      /**
-       * @private
-       * This field is private and should not be used, use `tag` instead.
-       */
-      __publicField(this, _m, "IrohBridgeError");
-      __publicField(this, "tag", "InternalError" /* InternalError */);
     }
     static new() {
       return new InternalError_();
@@ -428,6 +536,9 @@ var IrohBridgeError = (() => {
     NotStarted: NotStarted_,
     NotConnected: NotConnected_,
     InvalidNodeId: InvalidNodeId_,
+    InvalidAddress: InvalidAddress_,
+    InvalidTicket: InvalidTicket_,
+    InvalidDialTarget: InvalidDialTarget_,
     InvalidFrame: InvalidFrame_,
     OperationFailed: OperationFailed_,
     InternalError: InternalError_
@@ -447,10 +558,16 @@ var FfiConverterTypeIrohBridgeError = (() => {
         case 4:
           return new IrohBridgeError.InvalidNodeId();
         case 5:
-          return new IrohBridgeError.InvalidFrame();
+          return new IrohBridgeError.InvalidAddress({ message: FfiConverterString.read(from) });
         case 6:
-          return new IrohBridgeError.OperationFailed({ message: FfiConverterString.read(from) });
+          return new IrohBridgeError.InvalidTicket({ message: FfiConverterString.read(from) });
         case 7:
+          return new IrohBridgeError.InvalidDialTarget({ message: FfiConverterString.read(from) });
+        case 8:
+          return new IrohBridgeError.InvalidFrame();
+        case 9:
+          return new IrohBridgeError.OperationFailed({ message: FfiConverterString.read(from) });
+        case 10:
           return new IrohBridgeError.InternalError();
         default:
           throw new import_core.UniffiInternalError.UnexpectedEnumCase();
@@ -474,18 +591,36 @@ var FfiConverterTypeIrohBridgeError = (() => {
           ordinalConverter.write(4, into);
           return;
         }
-        case "InvalidFrame" /* InvalidFrame */: {
+        case "InvalidAddress" /* InvalidAddress */: {
           ordinalConverter.write(5, into);
+          const inner = value.inner;
+          FfiConverterString.write(inner.message, into);
           return;
         }
-        case "OperationFailed" /* OperationFailed */: {
+        case "InvalidTicket" /* InvalidTicket */: {
           ordinalConverter.write(6, into);
           const inner = value.inner;
           FfiConverterString.write(inner.message, into);
           return;
         }
-        case "InternalError" /* InternalError */: {
+        case "InvalidDialTarget" /* InvalidDialTarget */: {
           ordinalConverter.write(7, into);
+          const inner = value.inner;
+          FfiConverterString.write(inner.message, into);
+          return;
+        }
+        case "InvalidFrame" /* InvalidFrame */: {
+          ordinalConverter.write(8, into);
+          return;
+        }
+        case "OperationFailed" /* OperationFailed */: {
+          ordinalConverter.write(9, into);
+          const inner = value.inner;
+          FfiConverterString.write(inner.message, into);
+          return;
+        }
+        case "InternalError" /* InternalError */: {
+          ordinalConverter.write(10, into);
           return;
         }
         default:
@@ -506,17 +641,35 @@ var FfiConverterTypeIrohBridgeError = (() => {
         case "InvalidNodeId" /* InvalidNodeId */: {
           return ordinalConverter.allocationSize(4);
         }
-        case "InvalidFrame" /* InvalidFrame */: {
-          return ordinalConverter.allocationSize(5);
+        case "InvalidAddress" /* InvalidAddress */: {
+          const inner = value.inner;
+          let size = ordinalConverter.allocationSize(5);
+          size += FfiConverterString.allocationSize(inner.message);
+          return size;
         }
-        case "OperationFailed" /* OperationFailed */: {
+        case "InvalidTicket" /* InvalidTicket */: {
           const inner = value.inner;
           let size = ordinalConverter.allocationSize(6);
           size += FfiConverterString.allocationSize(inner.message);
           return size;
         }
+        case "InvalidDialTarget" /* InvalidDialTarget */: {
+          const inner = value.inner;
+          let size = ordinalConverter.allocationSize(7);
+          size += FfiConverterString.allocationSize(inner.message);
+          return size;
+        }
+        case "InvalidFrame" /* InvalidFrame */: {
+          return ordinalConverter.allocationSize(8);
+        }
+        case "OperationFailed" /* OperationFailed */: {
+          const inner = value.inner;
+          let size = ordinalConverter.allocationSize(9);
+          size += FfiConverterString.allocationSize(inner.message);
+          return size;
+        }
         case "InternalError" /* InternalError */: {
-          return ordinalConverter.allocationSize(7);
+          return ordinalConverter.allocationSize(10);
         }
         default:
           throw new import_core.UniffiInternalError.UnexpectedEnumCase();
@@ -527,9 +680,9 @@ var FfiConverterTypeIrohBridgeError = (() => {
 })();
 var FfiConverterOptionalString = new import_core.FfiConverterOptional(FfiConverterString);
 var FfiConverterOptionalUInt32 = new import_core.FfiConverterOptional(import_core.FfiConverterUInt32);
-var FfiConverterOptionalBytes = new import_core.FfiConverterOptional(import_core.FfiConverterArrayBuffer);
 var FfiConverterSequenceString = new import_core.FfiConverterArray(FfiConverterString);
 var FfiConverterOptionalSequenceString = new import_core.FfiConverterOptional(FfiConverterSequenceString);
+var FfiConverterOptionalBytes = new import_core.FfiConverterOptional(import_core.FfiConverterArrayBuffer);
 function uniffiEnsureInitialized() {
   const bindingsContractVersion = 30;
   const scaffoldingContractVersion = iroh_mobile_bridge_ffi_default().ubrn_ffi_iroh_mobile_bridge_uniffi_contract_version();
@@ -542,8 +695,11 @@ function uniffiEnsureInitialized() {
   if (iroh_mobile_bridge_ffi_default().ubrn_uniffi_iroh_mobile_bridge_checksum_func_close() !== 50746) {
     throw new import_core.UniffiInternalError.ApiChecksumMismatch("uniffi_iroh_mobile_bridge_checksum_func_close");
   }
-  if (iroh_mobile_bridge_ffi_default().ubrn_uniffi_iroh_mobile_bridge_checksum_func_connect() !== 8623) {
+  if (iroh_mobile_bridge_ffi_default().ubrn_uniffi_iroh_mobile_bridge_checksum_func_connect() !== 61054) {
     throw new import_core.UniffiInternalError.ApiChecksumMismatch("uniffi_iroh_mobile_bridge_checksum_func_connect");
+  }
+  if (iroh_mobile_bridge_ffi_default().ubrn_uniffi_iroh_mobile_bridge_checksum_func_connect_target() !== 43714) {
+    throw new import_core.UniffiInternalError.ApiChecksumMismatch("uniffi_iroh_mobile_bridge_checksum_func_connect_target");
   }
   if (iroh_mobile_bridge_ffi_default().ubrn_uniffi_iroh_mobile_bridge_checksum_func_echo_roundtrip() !== 22986) {
     throw new import_core.UniffiInternalError.ApiChecksumMismatch("uniffi_iroh_mobile_bridge_checksum_func_echo_roundtrip");
@@ -575,4 +731,21 @@ var iroh_mobile_bridge_default = Object.freeze({
   converters: {
     FfiConverterTypeIrohBridgeError
   }
+});
+// Annotate the CommonJS export names for ESM import in node:
+0 && (module.exports = {
+  IrohBridgeError,
+  IrohBridgeError_Tags,
+  bridgeVersion,
+  close,
+  connect,
+  connectTarget,
+  echoRoundtrip,
+  isRunning,
+  isStreamOpen,
+  nextMessage,
+  nodeId,
+  send,
+  start,
+  stop
 });

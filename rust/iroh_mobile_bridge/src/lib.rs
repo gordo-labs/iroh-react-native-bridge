@@ -15,6 +15,7 @@ use iroh::{
     endpoint::{Connection, Endpoint},
     EndpointAddr, EndpointId, RelayMode, RelayUrl, TransportAddr,
 };
+use iroh_tickets::endpoint::EndpointTicket;
 use serde::Deserialize;
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
@@ -48,6 +49,12 @@ pub enum IrohBridgeError {
     NotConnected,
     #[error("Invalid Iroh node id")]
     InvalidNodeId,
+    #[error("Invalid Iroh address: {message}")]
+    InvalidAddress { message: String },
+    #[error("Invalid Iroh endpoint ticket: {message}")]
+    InvalidTicket { message: String },
+    #[error("Invalid Iroh dial target: {message}")]
+    InvalidDialTarget { message: String },
     #[error("Invalid Iroh frame")]
     InvalidFrame,
     #[error("Iroh operation failed: {message}")]
@@ -206,25 +213,126 @@ fn normalize_dial_hint(input: &str) -> &str {
         .trim()
 }
 
-fn parse_transport_addr(input: &str) -> Option<TransportAddr> {
+fn invalid_address(message: impl Into<String>) -> IrohBridgeError {
+    IrohBridgeError::InvalidAddress {
+        message: message.into(),
+    }
+}
+
+fn invalid_ticket(message: impl Into<String>) -> IrohBridgeError {
+    IrohBridgeError::InvalidTicket {
+        message: message.into(),
+    }
+}
+
+fn invalid_dial_target(message: impl Into<String>) -> IrohBridgeError {
+    IrohBridgeError::InvalidDialTarget {
+        message: message.into(),
+    }
+}
+
+fn parse_direct_addr(input: &str) -> Result<TransportAddr, IrohBridgeError> {
     let value = input
         .trim()
         .strip_prefix("iroh+direct://")
         .or_else(|| input.trim().strip_prefix("ip:"))
         .unwrap_or(input.trim());
 
-    if let Ok(socket_addr) = SocketAddr::from_str(value) {
-        return Some(TransportAddr::Ip(socket_addr));
+    if value.is_empty() {
+        return Err(invalid_address("direct address must not be empty"));
     }
 
-    let relay_value = value.strip_prefix("relay:").unwrap_or(value);
-    if relay_value.starts_with("http://") || relay_value.starts_with("https://") {
-        if let Ok(relay_url) = RelayUrl::from_str(relay_value) {
-            return Some(TransportAddr::Relay(relay_url));
+    SocketAddr::from_str(value)
+        .map(TransportAddr::Ip)
+        .map_err(|_| invalid_address(format!("invalid direct socket address \"{value}\"")))
+}
+
+fn parse_relay_addr(input: &str) -> Result<TransportAddr, IrohBridgeError> {
+    let value = input.trim().strip_prefix("relay:").unwrap_or(input.trim());
+    if value.is_empty() {
+        return Err(invalid_address("relay URL must not be empty"));
+    }
+
+    RelayUrl::from_str(value)
+        .map(TransportAddr::Relay)
+        .map_err(|_| invalid_address(format!("invalid relay URL \"{value}\"")))
+}
+
+fn parse_transport_addr(input: &str) -> Result<TransportAddr, IrohBridgeError> {
+    let value = input.trim();
+    if value.starts_with("http://") || value.starts_with("https://") || value.starts_with("relay:")
+    {
+        parse_relay_addr(value)
+    } else {
+        parse_direct_addr(value)
+    }
+}
+
+fn endpoint_addr_from_ticket(ticket: &str) -> Result<EndpointAddr, IrohBridgeError> {
+    let value = normalize_dial_hint(ticket);
+    if value.is_empty() {
+        return Err(invalid_ticket("ticket must not be empty"));
+    }
+    let ticket = EndpointTicket::from_str(value)
+        .map_err(|error| invalid_ticket(format!("could not decode ticket: {error}")))?;
+    let endpoint_addr: EndpointAddr = ticket.into();
+    if endpoint_addr.addrs.is_empty() {
+        return Err(invalid_ticket(
+            "ticket must include at least one direct address or relay URL",
+        ));
+    }
+    Ok(endpoint_addr)
+}
+
+fn endpoint_addr_from_typed_target(
+    target_kind: &str,
+    node_id: Option<&str>,
+    endpoint_ticket: Option<&str>,
+    direct_addresses: Option<Vec<String>>,
+    relay_url: Option<&str>,
+) -> Result<EndpointAddr, IrohBridgeError> {
+    match target_kind.trim() {
+        "endpoint-ticket" => {
+            if node_id.is_some() || direct_addresses.is_some() || relay_url.is_some() {
+                return Err(invalid_dial_target(
+                    "endpoint-ticket accepts only the ticket field",
+                ));
+            }
+            let ticket = endpoint_ticket
+                .map(str::trim)
+                .filter(|value| !value.is_empty())
+                .ok_or_else(|| invalid_dial_target("endpoint-ticket requires a ticket"))?;
+            endpoint_addr_from_ticket(ticket)
         }
+        "endpoint-address" => {
+            if endpoint_ticket.is_some() {
+                return Err(invalid_dial_target(
+                    "endpoint-address does not accept an endpoint ticket",
+                ));
+            }
+            let remote_id = node_id
+                .map(str::trim)
+                .filter(|value| !value.is_empty())
+                .ok_or_else(|| invalid_dial_target("endpoint-address requires a node id"))
+                .and_then(parse_endpoint_id)?;
+            let mut addrs = Vec::new();
+            for address in direct_addresses.unwrap_or_default() {
+                addrs.push(parse_direct_addr(&address)?);
+            }
+            if let Some(relay_url) = relay_url {
+                addrs.push(parse_relay_addr(relay_url)?);
+            }
+            if addrs.is_empty() {
+                return Err(invalid_dial_target(
+                    "endpoint-address requires at least one direct address or relay URL",
+                ));
+            }
+            Ok(EndpointAddr::from_parts(remote_id, addrs))
+        }
+        other => Err(invalid_dial_target(format!(
+            "unsupported target kind \"{other}\""
+        ))),
     }
-
-    None
 }
 
 fn normalize_alpn(alpn: &str) -> Result<Vec<u8>, IrohBridgeError> {
@@ -265,28 +373,43 @@ fn endpoint_addr_from_hint(
 
     let hint = normalize_dial_hint(hint);
     if hint.starts_with('{') {
-        let ticket: IrohAddressTicket = serde_json::from_str(hint).map_err(err)?;
+        let ticket: IrohAddressTicket = serde_json::from_str(hint)
+            .map_err(|error| invalid_ticket(format!("invalid legacy JSON ticket: {error}")))?;
         let ticket_id = match ticket.id.as_deref() {
             Some(id) => parse_endpoint_id(id)?,
             None => remote_id,
         };
+        if ticket_id != remote_id {
+            return Err(invalid_ticket(
+                "legacy JSON ticket endpoint id does not match requested node id",
+            ));
+        }
         let addrs = ticket
             .addrs
             .unwrap_or_default()
             .into_iter()
-            .filter_map(|addr| parse_transport_addr(&addr))
-            .collect::<Vec<_>>();
+            .map(|addr| parse_transport_addr(&addr))
+            .collect::<Result<Vec<_>, _>>()?;
         if addrs.is_empty() {
-            return Err(err("Iroh addressing hint did not include usable addresses"));
+            return Err(invalid_address(
+                "Iroh addressing hint did not include usable addresses",
+            ));
         }
         return Ok(EndpointAddr::from_parts(ticket_id, addrs));
     }
 
-    if let Some(addr) = parse_transport_addr(hint) {
-        return Ok(EndpointAddr::from_parts(remote_id, [addr]));
+    if hint.starts_with("endpoint") {
+        let endpoint_addr = endpoint_addr_from_ticket(hint)?;
+        if endpoint_addr.id != remote_id {
+            return Err(invalid_ticket(
+                "endpoint ticket id does not match requested node id",
+            ));
+        }
+        return Ok(endpoint_addr);
     }
 
-    Err(err("Iroh addressing hint did not include usable addresses"))
+    let addr = parse_transport_addr(hint)?;
+    Ok(EndpointAddr::from_parts(remote_id, [addr]))
 }
 
 async fn write_frame<W>(writer: &mut W, payload: &[u8]) -> Result<(), IrohBridgeError>
@@ -475,9 +598,42 @@ fn connect(
     timeout_ms: Option<u32>,
 ) -> Result<String, IrohBridgeError> {
     let remote_id = parse_endpoint_id(&node_id)?;
+    let endpoint_addr = endpoint_addr_from_hint(remote_id, address_hint.as_deref())?;
+    connect_endpoint_addr(endpoint_addr, alpn, timeout_ms)
+}
+
+/// Dial a typed endpoint target and open one bidirectional framed stream.
+///
+/// This is the preferred API for new integrations. `connect` remains available
+/// for consumers using the legacy `node_id` + free-form address hint contract.
+#[uniffi::export]
+fn connect_target(
+    target_kind: String,
+    node_id: Option<String>,
+    endpoint_ticket: Option<String>,
+    direct_addresses: Option<Vec<String>>,
+    relay_url: Option<String>,
+    alpn: String,
+    timeout_ms: Option<u32>,
+) -> Result<String, IrohBridgeError> {
+    let endpoint_addr = endpoint_addr_from_typed_target(
+        &target_kind,
+        node_id.as_deref(),
+        endpoint_ticket.as_deref(),
+        direct_addresses,
+        relay_url.as_deref(),
+    )?;
+    connect_endpoint_addr(endpoint_addr, alpn, timeout_ms)
+}
+
+fn connect_endpoint_addr(
+    endpoint_addr: EndpointAddr,
+    alpn: String,
+    timeout_ms: Option<u32>,
+) -> Result<String, IrohBridgeError> {
+    let remote_id = endpoint_addr.id;
     let alpn_bytes = normalize_alpn(&alpn)?;
     let key = session_key(&remote_id, &alpn_bytes);
-    let endpoint_addr = endpoint_addr_from_hint(remote_id, address_hint.as_deref())?;
     let timeout = Duration::from_millis(
         timeout_ms
             .map(u64::from)
@@ -845,6 +1001,112 @@ mod tests {
     }
 
     #[test]
+    fn test_legacy_json_ticket_rejects_mismatched_endpoint_id() {
+        let requested_id = test_endpoint_id();
+        let other_id =
+            parse_endpoint_id("ll4nvgumiggcjdoua2wd644jeo7ppghbtinjka26wjaujoazkngq").unwrap();
+        let hint = serde_json::json!({
+            "id": other_id.to_z32(),
+            "addrs": ["127.0.0.1:38473"],
+        })
+        .to_string();
+        let result = endpoint_addr_from_hint(requested_id, Some(&hint));
+        assert!(matches!(
+            result,
+            Err(IrohBridgeError::InvalidTicket { message }) if message.contains("does not match")
+        ));
+    }
+
+    #[test]
+    fn test_legacy_json_ticket_rejects_any_invalid_address() {
+        let hint = serde_json::json!({
+            "id": test_endpoint_id().to_z32(),
+            "addrs": ["127.0.0.1:38473", "not-a-socket"],
+        })
+        .to_string();
+        let result = endpoint_addr_from_hint(test_endpoint_id(), Some(&hint));
+        assert!(matches!(
+            result,
+            Err(IrohBridgeError::InvalidAddress { message }) if message.contains("socket")
+        ));
+    }
+
+    #[test]
+    fn test_typed_target_accepts_official_endpoint_ticket() {
+        let expected = EndpointAddr::from_parts(
+            test_endpoint_id(),
+            [TransportAddr::Ip("127.0.0.1:38473".parse().unwrap())],
+        );
+        let ticket = EndpointTicket::new(expected.clone()).to_string();
+        let result =
+            endpoint_addr_from_typed_target("endpoint-ticket", None, Some(&ticket), None, None)
+                .expect("official endpoint ticket");
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_typed_target_accepts_explicit_direct_and_relay_addresses() {
+        let result = endpoint_addr_from_typed_target(
+            "endpoint-address",
+            Some(&test_endpoint_id().to_z32()),
+            None,
+            Some(vec!["127.0.0.1:38473".to_string()]),
+            Some("https://relay.example./"),
+        )
+        .expect("explicit endpoint address");
+        assert_eq!(result.id, test_endpoint_id());
+        assert_eq!(result.addrs.len(), 2);
+    }
+
+    #[test]
+    fn test_typed_target_rejects_invalid_or_missing_addresses() {
+        let invalid = endpoint_addr_from_typed_target(
+            "endpoint-address",
+            Some(&test_endpoint_id().to_z32()),
+            None,
+            Some(vec!["not-a-socket".to_string()]),
+            None,
+        );
+        assert!(matches!(
+            invalid,
+            Err(IrohBridgeError::InvalidAddress { message }) if message.contains("socket")
+        ));
+
+        let missing = endpoint_addr_from_typed_target(
+            "endpoint-address",
+            Some(&test_endpoint_id().to_z32()),
+            None,
+            None,
+            None,
+        );
+        assert!(matches!(
+            missing,
+            Err(IrohBridgeError::InvalidDialTarget { message })
+                if message.contains("at least one")
+        ));
+    }
+
+    #[test]
+    fn test_typed_ticket_rejects_ambiguous_address_fields() {
+        let expected = EndpointAddr::from_parts(
+            test_endpoint_id(),
+            [TransportAddr::Ip("127.0.0.1:38473".parse().unwrap())],
+        );
+        let ticket = EndpointTicket::new(expected).to_string();
+        let result = endpoint_addr_from_typed_target(
+            "endpoint-ticket",
+            Some(&test_endpoint_id().to_z32()),
+            Some(&ticket),
+            None,
+            None,
+        );
+        assert!(matches!(
+            result,
+            Err(IrohBridgeError::InvalidDialTarget { message }) if message.contains("only")
+        ));
+    }
+
+    #[test]
     fn test_send_without_connection_fails() {
         let _guard = test_guard();
         let result = send("missing".to_string(), b"hello".to_vec());
@@ -899,6 +1161,8 @@ mod tests {
                 Endpoint::builder(iroh::endpoint::presets::Minimal)
                     .relay_mode(RelayMode::Disabled)
                     .alpns(vec![ALPN.as_bytes().to_vec()])
+                    .bind_addr((std::net::Ipv4Addr::LOCALHOST, 0))
+                    .map_err(err)?
                     .bind()
                     .await
                     .map_err(err)
@@ -939,14 +1203,14 @@ mod tests {
             server.id().to_z32(),
             ALPN.to_string(),
             Some(hint.clone()),
-            Some(2_000),
+            Some(5_000),
         )
         .expect("first stream");
         let second = connect(
             server.id().to_z32(),
             ALPN.to_string(),
             Some(hint),
-            Some(2_000),
+            Some(5_000),
         )
         .expect("second stream");
         send(first.clone(), b"control".to_vec()).expect("first send");

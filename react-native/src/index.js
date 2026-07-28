@@ -12,13 +12,43 @@ const Platform = reactNative?.Platform || { OS: 'unknown' };
 let generatedRuntime = null;
 let generatedRuntimeError = null;
 
+class IrohBridgeError extends Error {
+  constructor(message, code = 'UNKNOWN', cause) {
+    super(message);
+    this.name = 'IrohBridgeError';
+    this.code = code;
+    if (cause !== undefined) this.cause = cause;
+  }
+}
+
+function errorCodeFor(tag, message) {
+  const tagCodes = {
+    AlreadyStarted: 'ALREADY_STARTED',
+    NotStarted: 'NOT_STARTED',
+    NotConnected: 'NOT_CONNECTED',
+    InvalidNodeId: 'INVALID_NODE_ID',
+    InvalidAddress: 'INVALID_ADDRESS',
+    InvalidTicket: 'INVALID_TICKET',
+    InvalidDialTarget: 'INVALID_DIAL_TARGET',
+    InvalidFrame: 'INVALID_FRAME',
+    InternalError: 'INTERNAL',
+  };
+  if (typeof tag === 'string' && tagCodes[tag]) return tagCodes[tag];
+  if (message.includes('connect timed out')) return 'DIAL_TIMEOUT';
+  if (message.includes('stream open timed out')) return 'STREAM_OPEN_TIMEOUT';
+  if (message.includes('send queue is full')) return 'BACKPRESSURE';
+  if (tag === 'OperationFailed') return 'OPERATION_FAILED';
+  return 'UNKNOWN';
+}
+
 function toArrayBuffer(data) {
   const bytes = data instanceof Uint8Array ? data : Uint8Array.from(data || []);
   return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
 }
 
 function normalizeRustError(error) {
-  if (!error) return new Error('Iroh native bridge failed');
+  if (error instanceof IrohBridgeError) return error;
+  if (!error) return new IrohBridgeError('Iroh native bridge failed');
   const tag = typeof error === 'object' && error ? error.tag : null;
   const inner = typeof error === 'object' && error ? error.inner : null;
   const innerMessage =
@@ -33,12 +63,7 @@ function normalizeRustError(error) {
         : typeof error === 'object' && typeof error.message === 'string'
           ? error.message
           : String(error);
-  if (error instanceof Error && error.message === message) return error;
-  const normalized = new Error(message);
-  if (error instanceof Error) {
-    normalized.cause = error;
-  }
-  return normalized;
+  return new IrohBridgeError(message, errorCodeFor(tag, message), error);
 }
 
 function callRuntime(fn) {
@@ -94,6 +119,88 @@ function normalizeConnectOptions(options) {
   };
 }
 
+function normalizeConnectTargetOptions(options) {
+  if (typeof options !== 'object' || options == null || Array.isArray(options)) {
+    throw new TypeError('Iroh connectTarget expects { target, alpn, timeoutMs? }');
+  }
+  const target = options.target;
+  const alpn = options.alpn;
+  const timeoutMs = options.timeoutMs;
+  if (typeof alpn !== 'string' || alpn.trim().length === 0) {
+    throw new TypeError('Iroh connectTarget alpn must be a non-empty string');
+  }
+  if (timeoutMs != null && (!Number.isFinite(timeoutMs) || timeoutMs <= 0)) {
+    throw new TypeError('Iroh connectTarget timeoutMs must be a positive number when provided');
+  }
+  if (typeof target !== 'object' || target == null || Array.isArray(target)) {
+    throw new TypeError('Iroh connectTarget target must be an object');
+  }
+
+  if (target.kind === 'endpoint-ticket') {
+    if (typeof target.ticket !== 'string' || target.ticket.trim().length === 0) {
+      throw new TypeError('Iroh endpoint-ticket target requires a non-empty ticket');
+    }
+    if (
+      target.nodeId != null ||
+      target.directAddresses != null ||
+      target.relayUrl != null
+    ) {
+      throw new TypeError('Iroh endpoint-ticket target accepts only the ticket field');
+    }
+    return {
+      targetKind: target.kind,
+      nodeId: undefined,
+      endpointTicket: target.ticket.trim(),
+      directAddresses: undefined,
+      relayUrl: undefined,
+      alpn: alpn.trim(),
+      timeoutMs: timeoutMs == null ? undefined : Math.floor(timeoutMs),
+    };
+  }
+
+  if (target.kind === 'endpoint-address') {
+    if (target.ticket != null) {
+      throw new TypeError('Iroh endpoint-address target does not accept a ticket');
+    }
+    if (typeof target.nodeId !== 'string' || target.nodeId.trim().length === 0) {
+      throw new TypeError('Iroh endpoint-address target requires a non-empty nodeId');
+    }
+    if (target.directAddresses != null && !Array.isArray(target.directAddresses)) {
+      throw new TypeError('Iroh endpoint-address directAddresses must be an array');
+    }
+    const directAddresses = (target.directAddresses || []).map((address) => {
+      if (typeof address !== 'string' || address.trim().length === 0) {
+        throw new TypeError('Iroh direct addresses must be non-empty strings');
+      }
+      return address.trim();
+    });
+    if (target.relayUrl != null && (
+      typeof target.relayUrl !== 'string' || target.relayUrl.trim().length === 0
+    )) {
+      throw new TypeError('Iroh endpoint-address relayUrl must be a non-empty string');
+    }
+    const relayUrl = target.relayUrl?.trim();
+    if (directAddresses.length === 0 && !relayUrl) {
+      throw new TypeError(
+        'Iroh endpoint-address target requires a direct address or relayUrl',
+      );
+    }
+    return {
+      targetKind: target.kind,
+      nodeId: target.nodeId.trim(),
+      endpointTicket: undefined,
+      directAddresses: directAddresses.length > 0 ? [...new Set(directAddresses)] : undefined,
+      relayUrl,
+      alpn: alpn.trim(),
+      timeoutMs: timeoutMs == null ? undefined : Math.floor(timeoutMs),
+    };
+  }
+
+  throw new TypeError(
+    'Iroh connectTarget target.kind must be "endpoint-ticket" or "endpoint-address"',
+  );
+}
+
 function resolveGeneratedRuntime() {
   if (generatedRuntime) return generatedRuntime;
   if (generatedRuntimeError) return null;
@@ -117,16 +224,7 @@ function getGeneratedIrohBridge() {
   const runtime = resolveGeneratedRuntime();
   if (!runtime) return null;
 
-  const connectStream = async (options) => {
-    const connectOptions = normalizeConnectOptions(options);
-    const connectionId = callRuntime(() =>
-      runtime.connect(
-        connectOptions.nodeId,
-        connectOptions.alpn,
-        connectOptions.addressHint,
-        connectOptions.timeoutMs,
-      ),
-    );
+  const createStream = (connectionId) => {
     const messageHandlers = new Set();
     const closeHandlers = new Set();
     const errorHandlers = new Set();
@@ -255,6 +353,71 @@ function getGeneratedIrohBridge() {
     return stream;
   };
 
+  const connectStream = async (options) => {
+    const connectOptions = normalizeConnectOptions(options);
+    const connectionId = callRuntime(() =>
+      runtime.connect(
+        connectOptions.nodeId,
+        connectOptions.alpn,
+        connectOptions.addressHint,
+        connectOptions.timeoutMs,
+      ),
+    );
+    return createStream(connectionId);
+  };
+
+  const connectNormalizedTargetStream = async (connectOptions) => {
+    if (typeof runtime.connectTarget !== 'function') {
+      throw new IrohBridgeError(
+        'Installed Iroh native runtime does not support typed dial targets',
+        'UNSUPPORTED_NATIVE_API',
+      );
+    }
+    const connectionId = callRuntime(() =>
+      runtime.connectTarget(
+        connectOptions.targetKind,
+        connectOptions.nodeId,
+        connectOptions.endpointTicket,
+        connectOptions.directAddresses,
+        connectOptions.relayUrl,
+        connectOptions.alpn,
+        connectOptions.timeoutMs,
+      ),
+    );
+    return createStream(connectionId);
+  };
+
+  const connectTargetStream = async (options) =>
+    connectNormalizedTargetStream(normalizeConnectTargetOptions(options));
+
+  const openLogicalSession = async (openStream) => {
+    const streams = new Set();
+    let closed = false;
+    return {
+      async openStream() {
+        if (closed) throw new Error('Iroh session is closed');
+        const stream = await openStream();
+        if (closed) {
+          await stream.close();
+          throw new Error('Iroh session closed while opening a stream');
+        }
+        streams.add(stream);
+        stream.onClose(() => streams.delete(stream));
+        return stream;
+      },
+      isClosed() {
+        return closed;
+      },
+      async close() {
+        if (closed) return;
+        closed = true;
+        const active = [...streams];
+        streams.clear();
+        await Promise.allSettled(active.map((stream) => stream.close()));
+      },
+    };
+  };
+
   return {
     bridgeVersion() {
       return callRuntime(() => runtime.bridgeVersion());
@@ -277,33 +440,16 @@ function getGeneratedIrohBridge() {
     connect(options) {
       return connectStream(options);
     },
+    connectTarget(options) {
+      return connectTargetStream(options);
+    },
     async openSession(options) {
       const connectOptions = normalizeConnectOptions(options);
-      const streams = new Set();
-      let closed = false;
-      return {
-        async openStream() {
-          if (closed) throw new Error('Iroh session is closed');
-          const stream = await connectStream(connectOptions);
-          if (closed) {
-            await stream.close();
-            throw new Error('Iroh session closed while opening a stream');
-          }
-          streams.add(stream);
-          stream.onClose(() => streams.delete(stream));
-          return stream;
-        },
-        isClosed() {
-          return closed;
-        },
-        async close() {
-          if (closed) return;
-          closed = true;
-          const active = [...streams];
-          streams.clear();
-          await Promise.allSettled(active.map((stream) => stream.close()));
-        },
-      };
+      return openLogicalSession(() => connectStream(connectOptions));
+    },
+    async openTargetSession(options) {
+      const connectOptions = normalizeConnectTargetOptions(options);
+      return openLogicalSession(() => connectNormalizedTargetStream(connectOptions));
     },
   };
 }
@@ -329,7 +475,13 @@ function getUnavailableIrohBridge(error) {
     async connect() {
       throw unavailable;
     },
+    async connectTarget() {
+      throw unavailable;
+    },
     async openSession() {
+      throw unavailable;
+    },
+    async openTargetSession() {
       throw unavailable;
     },
   };
@@ -347,6 +499,7 @@ function getIrohBridge() {
 }
 
 module.exports = {
+  IrohBridgeError,
   MODULE_NAME,
   getIrohBridge,
   default: getIrohBridge,

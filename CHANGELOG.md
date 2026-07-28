@@ -5,6 +5,17 @@ versions may still include API or packaging changes.
 
 ## Unreleased
 
+- Added `connectTarget()` and `openTargetSession()` with a typed union for
+  official Iroh `EndpointTicket` strings and explicit endpoint addresses.
+- Added deterministic `IrohBridgeError.code` values while preserving the
+  existing human-readable error messages and `Error` compatibility.
+- Reject invalid addresses, ambiguous typed targets, address-less tickets, and
+  legacy JSON tickets whose endpoint id differs from the requested peer.
+- Legacy `connect()` / `openSession()` remain available and accept their
+  existing valid address-hint forms.
+- Added official `iroh-tickets` parsing and regenerated host TS/C++/JS bindings.
+- Hardened `npm run ubrn:generate` so it rebuilds the host Rust library and
+  derives generated bindings from the current ABI instead of stale artifacts.
 - First public npm publication of `@gordo-labs/react-native-iroh@0.2.0`
   (operator gate; not done yet).
 

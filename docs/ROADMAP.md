@@ -28,7 +28,11 @@
 ## 0.3.x - Interop Hardening
 
 - More NAT/relay reports.
-- Clearer address/ticket model.
+- Clearer address/ticket model. ✅ Typed API and official endpoint-ticket
+  parsing implemented; consumer migration and device QA remain.
+- Reject ambiguous, invalid, address-less, and identity-mismatched dial data. ✅
+- Stable JavaScript error codes for recovery policy. ✅
+- Host binding generation derived from the current Rust ABI. ✅
 - Better connection close/error propagation.
 - Optional async iterator receive API.
 - Larger payload soak tests.

@@ -76,6 +76,36 @@ export function connect(nodeId: string, alpn: string, addressHint: string | unde
     }
 
 /**
+ * Dial a typed endpoint target and open one bidirectional framed stream.
+ *
+ * This is the preferred API for new integrations. `connect` remains available
+ * for consumers using the legacy `node_id` + free-form address hint contract.
+ */
+export function connectTarget(targetKind: string, nodeId: string | undefined, endpointTicket: string | undefined, directAddresses: Array<string> | undefined, relayUrl: string | undefined, alpn: string, timeoutMs: number | undefined): string /*throws*/ {
+    return ((__rb: Uint8Array) => {
+        try {
+            return FfiConverterString.lift(__rb);
+        } finally {
+            nativeModule().rustbuffer_free(__rb);
+        }
+    })(uniffiCaller.rustCallWithError(
+            /*liftError:*/ FfiConverterTypeIrohBridgeError.lift.bind(FfiConverterTypeIrohBridgeError),
+            /*caller:*/ (callStatus) => {
+                return nativeModule().ubrn_uniffi_iroh_mobile_bridge_fn_func_connect_target(
+        FfiConverterString.lower(targetKind, nativeModule().rustbuffer_alloc),
+        FfiConverterOptionalString.lower(nodeId, nativeModule().rustbuffer_alloc),
+        FfiConverterOptionalString.lower(endpointTicket, nativeModule().rustbuffer_alloc),
+        FfiConverterOptionalSequenceString.lower(directAddresses, nativeModule().rustbuffer_alloc),
+        FfiConverterOptionalString.lower(relayUrl, nativeModule().rustbuffer_alloc),
+        FfiConverterString.lower(alpn, nativeModule().rustbuffer_alloc),
+        FfiConverterOptionalUInt32.lower(timeoutMs, nativeModule().rustbuffer_alloc),
+                callStatus);
+            },
+            /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+    ));
+    }
+
+/**
  * Echo a string — keeps the P1 smoke test API available.
  */
 export function echoRoundtrip(input: string): string {
@@ -260,6 +290,9 @@ export enum IrohBridgeError_Tags {
     NotStarted = "NotStarted",
     NotConnected = "NotConnected",
     InvalidNodeId = "InvalidNodeId",
+    InvalidAddress = "InvalidAddress",
+    InvalidTicket = "InvalidTicket",
+    InvalidDialTarget = "InvalidDialTarget",
     InvalidFrame = "InvalidFrame",
     OperationFailed = "OperationFailed",
     InternalError = "InternalError"
@@ -374,6 +407,123 @@ export const IrohBridgeError = (() => {
 
     }
 
+    type InvalidAddress__interface = {
+        tag: IrohBridgeError_Tags.InvalidAddress;
+        inner:
+Readonly<{message: string}>
+    };
+    class InvalidAddress_ extends UniffiError implements InvalidAddress__interface {
+        /**
+         * @private
+         * This field is private and should not be used, use `tag` instead.
+         */
+        readonly [uniffiTypeNameSymbol] = "IrohBridgeError";
+        readonly tag = IrohBridgeError_Tags.InvalidAddress;
+        readonly inner:
+Readonly<{message: string}>;
+        constructor(
+inner: {message: string }) {
+            super("IrohBridgeError", "InvalidAddress");
+
+            this.inner = Object.freeze(inner);
+        }
+        static new(
+inner: {message: string }): InvalidAddress_ {
+            return new InvalidAddress_(inner);
+        }
+
+        static instanceOf(obj: any): obj is InvalidAddress_ {
+            return obj.tag === IrohBridgeError_Tags.InvalidAddress;
+        }
+        static hasInner(obj: any): obj is InvalidAddress_ {
+            return InvalidAddress_.instanceOf(obj);
+        }
+
+        static getInner(obj: InvalidAddress_):
+Readonly<{message: string}> {
+            return obj.inner;
+        }
+
+    }
+
+    type InvalidTicket__interface = {
+        tag: IrohBridgeError_Tags.InvalidTicket;
+        inner:
+Readonly<{message: string}>
+    };
+    class InvalidTicket_ extends UniffiError implements InvalidTicket__interface {
+        /**
+         * @private
+         * This field is private and should not be used, use `tag` instead.
+         */
+        readonly [uniffiTypeNameSymbol] = "IrohBridgeError";
+        readonly tag = IrohBridgeError_Tags.InvalidTicket;
+        readonly inner:
+Readonly<{message: string}>;
+        constructor(
+inner: {message: string }) {
+            super("IrohBridgeError", "InvalidTicket");
+
+            this.inner = Object.freeze(inner);
+        }
+        static new(
+inner: {message: string }): InvalidTicket_ {
+            return new InvalidTicket_(inner);
+        }
+
+        static instanceOf(obj: any): obj is InvalidTicket_ {
+            return obj.tag === IrohBridgeError_Tags.InvalidTicket;
+        }
+        static hasInner(obj: any): obj is InvalidTicket_ {
+            return InvalidTicket_.instanceOf(obj);
+        }
+
+        static getInner(obj: InvalidTicket_):
+Readonly<{message: string}> {
+            return obj.inner;
+        }
+
+    }
+
+    type InvalidDialTarget__interface = {
+        tag: IrohBridgeError_Tags.InvalidDialTarget;
+        inner:
+Readonly<{message: string}>
+    };
+    class InvalidDialTarget_ extends UniffiError implements InvalidDialTarget__interface {
+        /**
+         * @private
+         * This field is private and should not be used, use `tag` instead.
+         */
+        readonly [uniffiTypeNameSymbol] = "IrohBridgeError";
+        readonly tag = IrohBridgeError_Tags.InvalidDialTarget;
+        readonly inner:
+Readonly<{message: string}>;
+        constructor(
+inner: {message: string }) {
+            super("IrohBridgeError", "InvalidDialTarget");
+
+            this.inner = Object.freeze(inner);
+        }
+        static new(
+inner: {message: string }): InvalidDialTarget_ {
+            return new InvalidDialTarget_(inner);
+        }
+
+        static instanceOf(obj: any): obj is InvalidDialTarget_ {
+            return obj.tag === IrohBridgeError_Tags.InvalidDialTarget;
+        }
+        static hasInner(obj: any): obj is InvalidDialTarget_ {
+            return InvalidDialTarget_.instanceOf(obj);
+        }
+
+        static getInner(obj: InvalidDialTarget_):
+Readonly<{message: string}> {
+            return obj.inner;
+        }
+
+    }
+
     type InvalidFrame__interface = {
         tag: IrohBridgeError_Tags.InvalidFrame
     };
@@ -477,6 +627,9 @@ Readonly<{message: string}> {
   NotStarted: NotStarted_,
   NotConnected: NotConnected_,
   InvalidNodeId: InvalidNodeId_,
+  InvalidAddress: InvalidAddress_,
+  InvalidTicket: InvalidTicket_,
+  InvalidDialTarget: InvalidDialTarget_,
   InvalidFrame: InvalidFrame_,
   OperationFailed: OperationFailed_,
   InternalError: InternalError_
@@ -484,7 +637,7 @@ Readonly<{message: string}> {
 
 })();
 export type IrohBridgeError = InstanceType<
-    typeof IrohBridgeError['AlreadyStarted' | 'NotStarted' | 'NotConnected' | 'InvalidNodeId' | 'InvalidFrame' | 'OperationFailed' | 'InternalError']
+    typeof IrohBridgeError['AlreadyStarted' | 'NotStarted' | 'NotConnected' | 'InvalidNodeId' | 'InvalidAddress' | 'InvalidTicket' | 'InvalidDialTarget' | 'InvalidFrame' | 'OperationFailed' | 'InternalError']
 >;
 
 // FfiConverter for enum IrohBridgeError
@@ -498,9 +651,12 @@ const FfiConverterTypeIrohBridgeError = (() => {
                 case 2: return new IrohBridgeError.NotStarted();
                 case 3: return new IrohBridgeError.NotConnected();
                 case 4: return new IrohBridgeError.InvalidNodeId();
-                case 5: return new IrohBridgeError.InvalidFrame();
-                case 6: return new IrohBridgeError.OperationFailed({message: FfiConverterString.read(from) });
-                case 7: return new IrohBridgeError.InternalError();
+                case 5: return new IrohBridgeError.InvalidAddress({message: FfiConverterString.read(from) });
+                case 6: return new IrohBridgeError.InvalidTicket({message: FfiConverterString.read(from) });
+                case 7: return new IrohBridgeError.InvalidDialTarget({message: FfiConverterString.read(from) });
+                case 8: return new IrohBridgeError.InvalidFrame();
+                case 9: return new IrohBridgeError.OperationFailed({message: FfiConverterString.read(from) });
+                case 10: return new IrohBridgeError.InternalError();
                 default: throw new UniffiInternalError.UnexpectedEnumCase();
             }
         }
@@ -522,18 +678,36 @@ const FfiConverterTypeIrohBridgeError = (() => {
                     ordinalConverter.write(4, into);
                     return;
                 }
-                case IrohBridgeError_Tags.InvalidFrame: {
+                case IrohBridgeError_Tags.InvalidAddress: {
                     ordinalConverter.write(5, into);
+                    const inner = value.inner;
+                    FfiConverterString.write(inner.message, into);
                     return;
                 }
-                case IrohBridgeError_Tags.OperationFailed: {
+                case IrohBridgeError_Tags.InvalidTicket: {
                     ordinalConverter.write(6, into);
                     const inner = value.inner;
                     FfiConverterString.write(inner.message, into);
                     return;
                 }
-                case IrohBridgeError_Tags.InternalError: {
+                case IrohBridgeError_Tags.InvalidDialTarget: {
                     ordinalConverter.write(7, into);
+                    const inner = value.inner;
+                    FfiConverterString.write(inner.message, into);
+                    return;
+                }
+                case IrohBridgeError_Tags.InvalidFrame: {
+                    ordinalConverter.write(8, into);
+                    return;
+                }
+                case IrohBridgeError_Tags.OperationFailed: {
+                    ordinalConverter.write(9, into);
+                    const inner = value.inner;
+                    FfiConverterString.write(inner.message, into);
+                    return;
+                }
+                case IrohBridgeError_Tags.InternalError: {
+                    ordinalConverter.write(10, into);
                     return;
                 }
                 default:
@@ -555,17 +729,35 @@ const FfiConverterTypeIrohBridgeError = (() => {
                 case IrohBridgeError_Tags.InvalidNodeId: {
                     return ordinalConverter.allocationSize(4);
                 }
-                case IrohBridgeError_Tags.InvalidFrame: {
-                    return ordinalConverter.allocationSize(5);
+                case IrohBridgeError_Tags.InvalidAddress: {
+                    const inner = value.inner;
+                    let size = ordinalConverter.allocationSize(5);
+                    size += FfiConverterString.allocationSize(inner.message);
+                    return size;
                 }
-                case IrohBridgeError_Tags.OperationFailed: {
+                case IrohBridgeError_Tags.InvalidTicket: {
                     const inner = value.inner;
                     let size = ordinalConverter.allocationSize(6);
                     size += FfiConverterString.allocationSize(inner.message);
                     return size;
                 }
+                case IrohBridgeError_Tags.InvalidDialTarget: {
+                    const inner = value.inner;
+                    let size = ordinalConverter.allocationSize(7);
+                    size += FfiConverterString.allocationSize(inner.message);
+                    return size;
+                }
+                case IrohBridgeError_Tags.InvalidFrame: {
+                    return ordinalConverter.allocationSize(8);
+                }
+                case IrohBridgeError_Tags.OperationFailed: {
+                    const inner = value.inner;
+                    let size = ordinalConverter.allocationSize(9);
+                    size += FfiConverterString.allocationSize(inner.message);
+                    return size;
+                }
                 case IrohBridgeError_Tags.InternalError: {
-                    return ordinalConverter.allocationSize(7);
+                    return ordinalConverter.allocationSize(10);
                 }
                 default: throw new UniffiInternalError.UnexpectedEnumCase();
             }
@@ -580,14 +772,14 @@ const FfiConverterOptionalString = new FfiConverterOptional(FfiConverterString);
 // FfiConverter for number | undefined
 const FfiConverterOptionalUInt32 = new FfiConverterOptional(FfiConverterUInt32);
 
-// FfiConverter for ArrayBuffer | undefined
-const FfiConverterOptionalBytes = new FfiConverterOptional(FfiConverterArrayBuffer);
-
 // FfiConverter for Array<string>
 const FfiConverterSequenceString = new FfiConverterArray(FfiConverterString);
 
 // FfiConverter for Array<string> | undefined
 const FfiConverterOptionalSequenceString = new FfiConverterOptional(FfiConverterSequenceString);
+
+// FfiConverter for ArrayBuffer | undefined
+const FfiConverterOptionalBytes = new FfiConverterOptional(FfiConverterArrayBuffer);
 
 
 /**
@@ -616,6 +808,9 @@ function uniffiEnsureInitialized() {
     }
     if (nativeModule().ubrn_uniffi_iroh_mobile_bridge_checksum_func_connect() !== 61054) {
         throw new UniffiInternalError.ApiChecksumMismatch("uniffi_iroh_mobile_bridge_checksum_func_connect");
+    }
+    if (nativeModule().ubrn_uniffi_iroh_mobile_bridge_checksum_func_connect_target() !== 43714) {
+        throw new UniffiInternalError.ApiChecksumMismatch("uniffi_iroh_mobile_bridge_checksum_func_connect_target");
     }
     if (nativeModule().ubrn_uniffi_iroh_mobile_bridge_checksum_func_echo_roundtrip() !== 22986) {
         throw new UniffiInternalError.ApiChecksumMismatch("uniffi_iroh_mobile_bridge_checksum_func_echo_roundtrip");
