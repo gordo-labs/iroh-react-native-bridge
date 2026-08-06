@@ -32,6 +32,11 @@ jobs:
           registry-url: https://registry.npmjs.org
           package-manager-cache: false
 
+      - name: Ensure npm supports Trusted Publishing
+        run: |
+          npm install --global 'npm@^11.5.1'
+          npm --version
+
       - name: Set up Java
         uses: actions/setup-java@v4
         with:
