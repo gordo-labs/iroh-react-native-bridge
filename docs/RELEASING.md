@@ -65,15 +65,33 @@ apps. On physical devices verify:
 
 ## Publish And Tag
 
-Inspect `npm whoami` and `npm publish --dry-run` before changing the registry.
-Then publish exactly the tested worktree:
+The repository includes `.github/workflows/publish.yml`, which builds both
+native platforms and publishes from `main` through npm Trusted Publishing.
+Configure one trusted publisher on the npm package settings with:
+
+| npm field | Value |
+| --- | --- |
+| Provider | GitHub Actions |
+| Organization or user | `gordo-labs` |
+| Repository | `iroh-react-native-bridge` |
+| Workflow filename | `publish.yml` |
+| Environment | empty |
+| Allowed action | `npm publish` |
+
+The workflow has `id-token: write`, uses a GitHub-hosted macOS runner, rebuilds
+iOS and Android artifacts, runs `npm run verify:release`, and then publishes
+without an npm token. Start it manually from the GitHub Actions tab after the
+Trusted Publisher configuration is saved.
+
+For a manual local dry run, use:
 
 ```bash
-npm publish --access public --provenance
-PACKAGE_VERSION="$(node -p "require('./package.json').version")"
-git tag -s "v${PACKAGE_VERSION}" -m "Release ${PACKAGE_VERSION}"
-git push origin --tags
+npm publish --dry-run --access public --provenance=false
 ```
+
+Do not use a local token-based publish for the release when Trusted Publishing
+is enabled. The GitHub workflow generates provenance automatically through
+OIDC.
 
 Create the matching GitHub release with the changelog entry, supported platform
 matrix, tarball SHA-256 and physical-device results. Verify anonymously that
