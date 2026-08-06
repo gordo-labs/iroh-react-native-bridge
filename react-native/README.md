@@ -22,6 +22,18 @@ npm install @gordo-labs/react-native-iroh
 The first npm registry publish is still pending. Until it lands, link a local
 checkout — see [Building → Local App Integration](../docs/BUILDING.md#local-app-integration).
 
+This package has one runtime dependency (`@ubjs/core`). The
+`uniffi-bindgen-react-native` generator is kept in `devDependencies` because it
+is only needed to regenerate native bindings; consumers must not need it in
+their application dependency graph. `react-native` is intentionally a peer
+dependency and must be installed by the host app (for example, an app using
+React Native 0.81 or newer).
+
+The package declares `node >=22`. Node 26 also satisfies that range, but the
+repository pins Node 22 for reproducible native iOS/Android builds. A local
+`file:` dependency is supported only for bridge development; the published
+package contains no local or workspace dependency specifiers.
+
 iOS:
 
 ```bash

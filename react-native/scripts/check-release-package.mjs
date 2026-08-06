@@ -1,4 +1,5 @@
 import { existsSync, readFileSync, statSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -13,6 +14,28 @@ const cargoManifest = readFileSync(
 const cargoVersion = cargoManifest.match(/^version\s*=\s*"([^"]+)"/m)?.[1];
 
 const failures = [];
+
+if (packageJson.name !== '@gordo-labs/react-native-iroh') {
+  failures.push(`Unexpected npm package name: ${packageJson.name ?? '(missing)'}`);
+}
+
+if (packageJson.private === true) {
+  failures.push('The npm package must not be private');
+}
+
+if (!packageJson.engines?.node || !packageJson.engines.node.includes('22')) {
+  failures.push('engines.node must explicitly support Node.js 22 or newer');
+}
+
+// A published package must be self-contained. Local/workspace specs are valid
+// in an app monorepo, but npm cannot resolve them from the public registry.
+for (const section of ['dependencies', 'devDependencies', 'peerDependencies', 'optionalDependencies']) {
+  for (const [name, spec] of Object.entries(packageJson[section] ?? {})) {
+    if (/^(?:file|workspace|link):/.test(String(spec))) {
+      failures.push(`Non-publishable ${section} entry ${name}: ${spec}`);
+    }
+  }
+}
 
 if (!cargoVersion || cargoVersion !== packageJson.version) {
   failures.push(
@@ -55,6 +78,28 @@ for (const [label, relativePath, minimumBytes] of requiredFiles) {
     failures.push(`${label} is unexpectedly small (${size} bytes): ${relativePath}`);
   }
   if (/\.(?:a|so)$/.test(relativePath)) nativeBytes += size;
+}
+
+// Validate the actual npm packlist as well as the source tree. This catches a
+// future `files` glob change that silently leaves a native slice out of the
+// tarball even though it exists locally.
+try {
+  const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+  const packed = JSON.parse(
+    execFileSync(npmCommand, ['pack', '--dry-run', '--json', '--ignore-scripts'], {
+      cwd: packageRoot,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+    }),
+  );
+  const packFiles = new Set((packed.at(-1)?.files ?? []).map(({ path }) => path));
+  for (const [, relativePath] of requiredFiles) {
+    if (existsSync(resolve(packageRoot, relativePath)) && !packFiles.has(relativePath)) {
+      failures.push(`Required file is not included in npm tarball: ${relativePath}`);
+    }
+  }
+} catch (error) {
+  failures.push(`Unable to inspect npm packlist: ${error.message}`);
 }
 
 if (failures.length > 0) {

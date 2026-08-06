@@ -65,16 +65,16 @@
     "provenance": true
   },
   "dependencies": {
-    "@ubjs/core": "^0.31.0-3",
-    "uniffi-bindgen-react-native": "^0.31.0-3"
+    "@ubjs/core": "^0.31.0-3"
   },
   "devDependencies": {
-    "esbuild": "0.25.12"
+    "esbuild": "0.25.12",
+    "uniffi-bindgen-react-native": "^0.31.0-3"
   },
   "peerDependencies": {
     "react-native": ">=0.81"
   },
   "overrides": {
-    "brace-expansion": "1.1.16"
+    "brace-expansion": "1.1.18"
   }
 }

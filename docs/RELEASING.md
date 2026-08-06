@@ -15,6 +15,18 @@ a green source CI run is necessary but not sufficient for release.
 - Update `CHANGELOG.md`, `react-native/package.json` and
   `rust/iroh_mobile_bridge/Cargo.toml` to the same version.
 
+The package is not self-referential: `react-native` is a peer supplied by the
+host application, `@ubjs/core` is the only npm runtime dependency, and
+`uniffi-bindgen-react-native` is a build-time dependency used by the UBRN
+scripts. A `file:`, `workspace:` or `link:` specifier must never be present in
+the package metadata. Before the first publish, `npm view
+@gordo-labs/react-native-iroh version` returning `E404` is expected; validate
+the release tarball locally instead.
+
+The package engine is `node >=22`, so Node 26 satisfies the declared range.
+Node 22 remains the reproducible maintainer toolchain because it is pinned by
+`.nvmrc` and used by CI for native builds.
+
 ## Build And Verify
 
 ```bash
