@@ -79,6 +79,24 @@ Create the matching GitHub release with the changelog entry, supported platform
 matrix, tarball SHA-256 and physical-device results. Verify anonymously that
 the npm package and GitHub source are readable before announcing the release.
 
+`publishConfig.provenance` is deliberately enabled. npm can only create that
+attestation from a supported CI provider (for example, GitHub Actions with
+trusted publishing); a local shell has no provenance provider and reports
+`Automatic provenance generation not supported for provider: null`. That is a
+publishing-environment error, not a package or tarball error.
+
+For a local dry run, or an explicitly non-attested one-off publication, use the
+opt-out flag explicitly:
+
+```bash
+npm publish --dry-run --access public --provenance=false
+# only if the release policy accepts no provenance attestation:
+npm publish --access public --provenance=false
+```
+
+Do not change `publishConfig.provenance` to `false` just to make local npm
+publishing succeed; that would silently remove the release integrity signal.
+
 ## Abort Conditions
 
 Do not publish when any of these are true:
