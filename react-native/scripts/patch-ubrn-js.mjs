@@ -7,6 +7,21 @@ const generatedJsPath = resolve(here, '../src/generated/iroh_mobile_bridge.js');
 
 let contents = readFileSync(generatedJsPath, 'utf8');
 
+const modernBindings = [
+  'function connect(nodeId2, alpn, addressHint, timeoutMs)',
+  'function connectTarget(targetKind, nodeId2, endpointTicket, directAddresses, relayUrl, alpn, timeoutMs)',
+  'function isStreamOpen(connectionId)',
+  'function start(alpns)',
+  'FfiConverterOptionalUInt32',
+  'FfiConverterOptionalSequenceString',
+  'ubrn_uniffi_iroh_mobile_bridge_checksum_func_connect_target',
+];
+
+if (modernBindings.every((snippet) => contents.includes(snippet))) {
+  console.log('Generated JS already matches the current bridge ABI.');
+  process.exit(0);
+}
+
 const replacements = [
   [
     `  isRunning: () => isRunning,

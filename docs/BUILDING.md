@@ -54,13 +54,19 @@ native dependencies change.
 
 ```bash
 cd react-native
+npm run ubrn:generate
 npm run ubrn:ios
 npm run ubrn:android
 ```
 
-Both commands are mandatory for releases that add or remove a Rust export. The
-generated TypeScript contains UniFFI contract checksums, so publishing new JS
-against stale `.so`/`.xcframework` binaries is intentionally unsupported.
+`ubrn:generate` first compiles the host Rust library, extracts the current
+UniFFI ABI, and regenerates TypeScript, C++, and CommonJS bindings. This is a
+fast source-level check and does not replace the two platform builds.
+
+Both platform commands are mandatory for releases that add or remove a Rust
+export. The generated TypeScript contains UniFFI contract checksums, so
+publishing new JS against stale `.so`/`.xcframework` binaries is intentionally
+unsupported.
 
 After regenerating artifacts:
 

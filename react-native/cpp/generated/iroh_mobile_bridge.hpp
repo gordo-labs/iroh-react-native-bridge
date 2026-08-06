@@ -25,6 +25,7 @@ class NativeIrohMobileBridge : public jsi::HostObject {
     jsi::Value cpp_uniffi_iroh_mobile_bridge_fn_func_bridge_version(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count);
     jsi::Value cpp_uniffi_iroh_mobile_bridge_fn_func_close(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count);
     jsi::Value cpp_uniffi_iroh_mobile_bridge_fn_func_connect(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count);
+    jsi::Value cpp_uniffi_iroh_mobile_bridge_fn_func_connect_target(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count);
     jsi::Value cpp_uniffi_iroh_mobile_bridge_fn_func_echo_roundtrip(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count);
     jsi::Value cpp_uniffi_iroh_mobile_bridge_fn_func_is_running(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count);
     jsi::Value cpp_uniffi_iroh_mobile_bridge_fn_func_is_stream_open(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count);
@@ -36,6 +37,7 @@ class NativeIrohMobileBridge : public jsi::HostObject {
     jsi::Value cpp_uniffi_iroh_mobile_bridge_checksum_func_bridge_version(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count);
     jsi::Value cpp_uniffi_iroh_mobile_bridge_checksum_func_close(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count);
     jsi::Value cpp_uniffi_iroh_mobile_bridge_checksum_func_connect(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count);
+    jsi::Value cpp_uniffi_iroh_mobile_bridge_checksum_func_connect_target(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count);
     jsi::Value cpp_uniffi_iroh_mobile_bridge_checksum_func_echo_roundtrip(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count);
     jsi::Value cpp_uniffi_iroh_mobile_bridge_checksum_func_is_running(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count);
     jsi::Value cpp_uniffi_iroh_mobile_bridge_checksum_func_is_stream_open(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count);

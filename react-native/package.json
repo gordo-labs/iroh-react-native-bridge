@@ -28,7 +28,8 @@
     "format:generated": "node scripts/format-generated.mjs",
     "ubrn:android": "node scripts/with-native-build-env.mjs --android ubrn build android --release --config ubrn.config.yaml --and-generate && node scripts/patch-ubrn-cmake.mjs && node scripts/patch-ubrn-js.mjs && npm run format:generated",
     "ubrn:ios": "IPHONEOS_DEPLOYMENT_TARGET=13.0 node scripts/with-native-build-env.mjs ubrn build ios --release --config ubrn.config.yaml --and-generate && node scripts/patch-ubrn-ios.mjs && node scripts/patch-ubrn-cmake.mjs && node scripts/patch-ubrn-js.mjs && npm run format:generated",
-    "ubrn:generate": "ubrn generate jsi turbo-module --config ubrn.config.yaml && node scripts/patch-ubrn-cmake.mjs && node scripts/patch-ubrn-ios.mjs && node scripts/patch-ubrn-js.mjs && npm run format:generated"
+    "ubrn:turbo-module": "ubrn generate jsi turbo-module --config ubrn.config.yaml && node scripts/patch-ubrn-cmake.mjs && node scripts/patch-ubrn-ios.mjs && node scripts/patch-ubrn-js.mjs && npm run format:generated",
+    "ubrn:generate": "node scripts/generate-host-bindings.mjs && npm run ubrn:turbo-module"
   },
   "files": [
     "src",
@@ -64,13 +65,16 @@
     "provenance": true
   },
   "dependencies": {
-    "@ubjs/core": "^0.31.0-3",
+    "@ubjs/core": "^0.31.0-3"
+  },
+  "devDependencies": {
+    "esbuild": "0.25.12",
     "uniffi-bindgen-react-native": "^0.31.0-3"
   },
   "peerDependencies": {
     "react-native": ">=0.81"
   },
   "overrides": {
-    "brace-expansion": "1.1.16"
+    "brace-expansion": "1.1.18"
   }
 }

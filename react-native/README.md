@@ -22,6 +22,18 @@ npm install @gordo-labs/react-native-iroh
 The first npm registry publish is still pending. Until it lands, link a local
 checkout — see [Building → Local App Integration](../docs/BUILDING.md#local-app-integration).
 
+This package has one runtime dependency (`@ubjs/core`). The
+`uniffi-bindgen-react-native` generator is kept in `devDependencies` because it
+is only needed to regenerate native bindings; consumers must not need it in
+their application dependency graph. `react-native` is intentionally a peer
+dependency and must be installed by the host app (for example, an app using
+React Native 0.81 or newer).
+
+The package declares `node >=22`. Node 26 also satisfies that range, but the
+repository pins Node 22 for reproducible native iOS/Android builds. A local
+`file:` dependency is supported only for bridge development; the published
+package contains no local or workspace dependency specifiers.
+
 iOS:
 
 ```bash
@@ -38,7 +50,7 @@ Then **rebuild** the native app (JS-only reload is not enough).
 | --- | --- |
 | Iroh endpoint lifecycle (`start` / `stop`) | Pairing, auth, identity trust |
 | Local node id (z-base-32) | Discovering the remote peer’s node id + addresses |
-| Dialing with caller-provided **ALPN** + **address hint** | Retry / fallback policy |
+| Dialing with caller-provided **ALPN** + validated target | Retry / fallback policy |
 | Length-prefixed framed byte streams over QUIC | Application protocol (JSON-RPC, HTTP tunnel, media, …) |
 | Native TurboModule wiring (iOS + Android) | UI and product branding |
 
@@ -56,9 +68,10 @@ getIrohBridge()
       ├── start({ alpns })
       ├── nodeId()
       │
-      ├── connect(...)           → one framed stream (QUIC bi-stream)
-      │
-      └── openSession(...)       → logical owner of several streams
+      ├── connectTarget(...)     → preferred typed dial + one framed stream
+      ├── connect(...)           → legacy hint dial + one framed stream
+      ├── openTargetSession(...) → typed logical session
+      └── openSession(...)       → legacy logical session
                │
                └── openStream()  → another independent framed stream
                                    (same remote + ALPN reuses one QUIC session)
@@ -71,7 +84,8 @@ Important vocabulary:
 | **Endpoint** | Local Iroh node created by `start()`. Lives until `stop()`. |
 | **Node id** | Public endpoint identity as **z-base-32** (`nodeId()`). |
 | **ALPN** | Application-Layer Protocol Negotiation string. Both peers must agree (e.g. `my-app/1`). Advertised at `start()`, selected again on dial. |
-| **Address hint** | How to *reach* the remote: direct socket, relay URL, or JSON ticket. **Required** for dialing. A bare node id is not enough. |
+| **Dial target** | Preferred typed description of the peer: an official `EndpointTicket`, or endpoint id plus explicit direct/relay addresses. |
+| **Address hint** | Legacy free-form reachability input retained for `connect()` compatibility. |
 | **QUIC session** | One native transport connection to `(remoteNodeId, alpn)`. Cached and reused (up to 32 warm sessions). |
 | **Stream / connection** | One bidirectional framed byte pipe returned by `connect()` or `session.openStream()`. Closing one stream does **not** close siblings. |
 | **Logical session** | JS helper from `openSession()` that tracks streams you opened together so you can close them as a group. It does **not** own the native QUIC handle by itself. |
@@ -96,7 +110,7 @@ console.log('local node', localId, 'running?', await bridge.isRunning());
 
 ### Rules
 
-1. Call **`start()` before** `connect()` / `openSession()`.
+1. Call **`start()` before** any connect/session method.
 2. Pass every ALPN your app might dial (or accept later when server mode exists).
 3. If `alpns` is omitted, the endpoint uses the default **`iroh-rn/1`**.
 4. Calling `start()` again while already running is a **no-op** (ALPNs are not
@@ -109,8 +123,8 @@ console.log('local node', localId, 'running?', await bridge.isRunning());
 ### Native module name
 
 The TurboModule is named **`IrohBridge`**. If it is missing from the binary,
-`getIrohBridge()` still returns a stub; `start` / `connect` / `openSession`
-reject with a diagnostic error (see [Expected Errors](#expected-errors)).
+`getIrohBridge()` still returns a stub; dial methods reject with a diagnostic
+error (see [Expected Errors](#expected-errors)).
 
 ---
 
@@ -152,10 +166,27 @@ endpoint. Safe to call when not running.
 
 Local endpoint id as **z-base-32**. Empty string if not started.
 
+#### `connectTarget(options): Promise<IrohBridgeConnection>`
+
+Preferred dial API. It validates one unambiguous target and then dials (or
+reuses) the QUIC session for its endpoint id and `alpn`.
+
+| Field | Required | Notes |
+| --- | --- | --- |
+| `target` | **yes** | An `endpoint-ticket` or `endpoint-address` target (see [Dial targets](#dial-targets)). |
+| `alpn` | **yes** | Must match a protocol the remote speaks. |
+| `timeoutMs` | no | Positive number. Default **4500**. Applies to dial and opening the bi-stream. |
+
+#### `openTargetSession(options): Promise<IrohBridgeSession>`
+
+Typed equivalent of `openSession()`. `openStream()` opens another independent
+stream to the same validated peer/ALPN and `close()` closes the streams owned by
+that logical session.
+
 #### `connect(options): Promise<IrohBridgeConnection>`
 
-Dials (or reuses) the peer QUIC session for `(nodeId, alpn)` and opens **one**
-new bidirectional framed stream.
+Legacy compatibility API. Dials (or reuses) the peer QUIC session for
+`(nodeId, alpn)` and opens **one** new bidirectional framed stream.
 
 | Field | Required | Notes |
 | --- | --- | --- |
@@ -240,7 +271,45 @@ Closes all streams opened through this session object.
 
 ---
 
-## Address hints
+## Dial targets
+
+New integrations should use one of these typed targets.
+
+Official endpoint ticket:
+
+```ts
+const stream = await bridge.connectTarget({
+  target: {
+    kind: 'endpoint-ticket',
+    ticket: remoteEndpointTicket,
+  },
+  alpn: 'demo-app/1',
+});
+```
+
+`ticket` must be the canonical string produced by the official
+`iroh-tickets::endpoint::EndpointTicket`. Its endpoint identity and reachability
+travel together. Tickets with no direct or relay address are rejected.
+
+Explicit endpoint address:
+
+```ts
+const stream = await bridge.connectTarget({
+  target: {
+    kind: 'endpoint-address',
+    nodeId: remoteNodeId,
+    directAddresses: ['203.0.113.10:4433'],
+    relayUrl: 'https://relay.example./',
+  },
+  alpn: 'demo-app/1',
+});
+```
+
+At least one direct address or relay URL is required. Each supplied value is
+validated; one bad value rejects the complete target instead of being silently
+discarded. Duplicate direct strings are removed by the JS wrapper.
+
+## Legacy address hints
 
 Dialing **requires** a usable `addressHint`. A node id alone is rejected.
 
@@ -252,6 +321,7 @@ Accepted forms (after optional `iroh+ticket://` / `iroh+ticket:` strip):
 | Prefixed direct | `iroh+direct://203.0.113.10:4433` or `ip:203.0.113.10:4433` | Same |
 | Relay URL | `https://relay.example` | `TransportAddr::Relay` |
 | Prefixed relay | `relay:https://relay.example` | Same |
+| Official ticket | `endpoint…` | Canonical `EndpointTicket`; embedded id must match `nodeId` |
 | JSON ticket | `{"id":"<z32>","addrs":["https://…","1.2.3.4:4433"]}` | Parsed ticket; `addrs` must contain ≥1 usable entry |
 
 Rejected / useless examples:
@@ -259,6 +329,8 @@ Rejected / useless examples:
 - Missing / empty hint
 - Display-only strings with no socket or `http(s)` relay
 - Bare `iroh+relay://…` without a real relay URL or direct addresses
+- A JSON/official ticket whose embedded endpoint id differs from `nodeId`
+- A JSON ticket containing any malformed address
 
 Your host app must obtain hints from the remote peer (pairing QR, ticket API,
 discovery service, etc.). This package does not discover peers by itself.
@@ -291,7 +363,7 @@ Above this framing, define your own application messages (JSON, protobuf, …).
 
 ## Generic connection examples
 
-### 1. Single stream (`connect`)
+### 1. Single stream (`connectTarget`)
 
 Minimal dial + ping/pong-style exchange:
 
@@ -301,17 +373,16 @@ import { getIrohBridge } from '@gordo-labs/react-native-iroh';
 const ALPN = 'demo-app/1';
 const bridge = getIrohBridge();
 
-async function runOnce(remote: {
-  nodeId: string;
-  addressHint: string;
-}) {
+async function runOnce(remoteEndpointTicket: string) {
   await bridge.start({ alpns: [ALPN] });
   console.log('I am', await bridge.nodeId());
 
-  const stream = await bridge.connect({
-    nodeId: remote.nodeId,
+  const stream = await bridge.connectTarget({
+    target: {
+      kind: 'endpoint-ticket',
+      ticket: remoteEndpointTicket,
+    },
     alpn: ALPN,
-    addressHint: remote.addressHint,
     timeoutMs: 4500,
   });
 
@@ -338,7 +409,7 @@ async function runOnce(remote: {
 }
 ```
 
-### 2. Several streams (`openSession`)
+### 2. Several streams (`openTargetSession`)
 
 Typical pattern: one control stream + one bulk/data stream on the same peer,
 torn down together:
@@ -349,13 +420,15 @@ import { getIrohBridge } from '@gordo-labs/react-native-iroh';
 const ALPN = 'demo-app/1';
 const bridge = getIrohBridge();
 
-async function connectPeer(remote: { nodeId: string; addressHint: string }) {
+async function connectPeer(remoteEndpointTicket: string) {
   await bridge.start({ alpns: [ALPN] });
 
-  const session = await bridge.openSession({
-    nodeId: remote.nodeId,
+  const session = await bridge.openTargetSession({
+    target: {
+      kind: 'endpoint-ticket',
+      ticket: remoteEndpointTicket,
+    },
     alpn: ALPN,
-    addressHint: remote.addressHint,
     timeoutMs: 6000,
   });
 
@@ -393,7 +466,7 @@ This package is usually one endpoint per app process. A full two-device demo
 needs:
 
 1. Device A: `start` → `nodeId()` + publish its address ticket / relay / direct addrs.
-2. Device B: `start` → `connect({ nodeId: A, addressHint: … })`.
+2. Device B: `start` → `connectTarget({ target: ticketFromA, … })`.
 3. The remote side must speak the same ALPN and the same length-prefixed framing.
 
 Until mobile **listen/accept** is exposed, the “server” is typically a desktop
@@ -407,10 +480,12 @@ const bridge = getIrohBridge();
 await bridge.start({ alpns: ['my-app/1'] });
 
 // after pairing gives you remote credentials
-let session = await bridge.openSession({
-  nodeId: paired.nodeId,
+let session = await bridge.openTargetSession({
+  target: {
+    kind: 'endpoint-ticket',
+    ticket: paired.endpointTicket,
+  },
   alpn: 'my-app/1',
-  addressHint: paired.addressHint,
 });
 
 // feature code uses session.openStream() …
@@ -443,12 +518,37 @@ type IrohBridgeSession = {
   close(): Promise<void>;
 };
 
+type IrohDialTarget =
+  | {
+      kind: 'endpoint-ticket';
+      ticket: string;
+    }
+  | {
+      kind: 'endpoint-address';
+      nodeId: string;
+      directAddresses?: string[];
+      relayUrl?: string | null;
+    };
+
+type IrohConnectTargetOptions = {
+  target: IrohDialTarget;
+  alpn: string;
+  timeoutMs?: number;
+};
+
 type IrohBridge = {
   bridgeVersion(): string | Promise<string>;
   nodeId(): string | Promise<string>;
   start(options?: { alpns?: string[] }): Promise<void>;
   stop(): Promise<void>;
   isRunning(): boolean | Promise<boolean>;
+  connectTarget(
+    options: IrohConnectTargetOptions,
+  ): Promise<IrohBridgeConnection>;
+  openTargetSession(
+    options: IrohConnectTargetOptions,
+  ): Promise<IrohBridgeSession>;
+  // Legacy compatibility surface:
   connect(options: {
     nodeId: string;
     alpn: string;
@@ -477,12 +577,19 @@ declare function getIrohBridge(): IrohBridge;
 | `Iroh addressing hint is required` / `did not include usable addresses` | Bad or missing `addressHint` | Pass relay URL, direct socket, or JSON ticket from the peer |
 | `IrohBridgeError.NotStarted` | Dialed before `start()` | Call `start()` first |
 | `IrohBridgeError.InvalidNodeId` | Unparseable `nodeId` | Use z-base-32 (or accepted hex form) from the peer |
+| `IrohBridgeError.InvalidAddress` | A direct socket or relay URL is malformed | Correct the advertised endpoint address; do not retry unchanged data |
+| `IrohBridgeError.InvalidTicket` | Ticket is malformed, address-less, or mismatches the requested legacy peer | Refresh the peer ticket/addressing data |
+| `IrohBridgeError.InvalidDialTarget` | Typed target is missing fields, ambiguous, or has an unsupported kind | Fix the caller's target construction |
 | `IrohBridgeError.InvalidFrame` | Empty or >2 MiB payload | Fix app framing |
 | `Iroh connect timed out` | Dial / bi-stream open exceeded `timeoutMs` | Check network, hint, relays; raise timeout carefully |
 | `Iroh send queue is full` | Receiver too slow / backpressure | Slow sends, drain `onMessage`, or close and redial |
 | `Iroh stream is closed` / `Iroh session is closed` | Used after local/remote close | Open a new stream/session |
 
-Rust errors are normalized to `Error` messages like `IrohBridgeError.<Tag>: …`.
+Rust errors are normalized to `IrohBridgeError`, which remains an `Error`
+subclass and adds a stable `code` for recovery policy. Examples include
+`INVALID_TICKET`, `INVALID_ADDRESS`, `DIAL_TIMEOUT`,
+`STREAM_OPEN_TIMEOUT`, `BACKPRESSURE`, and `NOT_CONNECTED`. Existing message
+strings remain available for logs.
 
 ---
 
@@ -491,6 +598,7 @@ Rust errors are normalized to `Error` messages like `IrohBridgeError.<Tag>: …`
 ```bash
 npm ci
 npm run test:source
+npm run ubrn:generate
 npm run ubrn:ios
 npm run ubrn:android
 npm run verify:release

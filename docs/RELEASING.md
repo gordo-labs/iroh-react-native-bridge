@@ -15,6 +15,18 @@ a green source CI run is necessary but not sufficient for release.
 - Update `CHANGELOG.md`, `react-native/package.json` and
   `rust/iroh_mobile_bridge/Cargo.toml` to the same version.
 
+The package is not self-referential: `react-native` is a peer supplied by the
+host application, `@ubjs/core` is the only npm runtime dependency, and
+`uniffi-bindgen-react-native` is a build-time dependency used by the UBRN
+scripts. A `file:`, `workspace:` or `link:` specifier must never be present in
+the package metadata. Before the first publish, `npm view
+@gordo-labs/react-native-iroh version` returning `E404` is expected; validate
+the release tarball locally instead.
+
+The package engine is `node >=22`, so Node 26 satisfies the declared range.
+Node 22 remains the reproducible maintainer toolchain because it is pinned by
+`.nvmrc` and used by CI for native builds.
+
 ## Build And Verify
 
 ```bash
@@ -66,6 +78,24 @@ git push origin --tags
 Create the matching GitHub release with the changelog entry, supported platform
 matrix, tarball SHA-256 and physical-device results. Verify anonymously that
 the npm package and GitHub source are readable before announcing the release.
+
+`publishConfig.provenance` is deliberately enabled. npm can only create that
+attestation from a supported CI provider (for example, GitHub Actions with
+trusted publishing); a local shell has no provenance provider and reports
+`Automatic provenance generation not supported for provider: null`. That is a
+publishing-environment error, not a package or tarball error.
+
+For a local dry run, or an explicitly non-attested one-off publication, use the
+opt-out flag explicitly:
+
+```bash
+npm publish --dry-run --access public --provenance=false
+# only if the release policy accepts no provenance attestation:
+npm publish --access public --provenance=false
+```
+
+Do not change `publishConfig.provenance` to `false` just to make local npm
+publishing succeed; that would silently remove the release integrity signal.
 
 ## Abort Conditions
 

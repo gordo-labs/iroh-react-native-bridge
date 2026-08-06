@@ -50,6 +50,8 @@ What works today:
   layout.
 - Minimal endpoint lifecycle: `start`, `stop`, `isRunning`, `nodeId`.
 - Outbound QUIC connection using an advertised address hint.
+- Typed dialing with either an official Iroh `EndpointTicket` or an explicit
+  endpoint id plus direct/relay addresses (`connectTarget`).
 - Length-prefixed binary frame send/receive for an app-level tunnel.
 - Multiple independent streams over a reused QUIC peer session (`openSession` /
   `openStream`; `connect()` still works and reuses the same session).
@@ -96,10 +98,12 @@ const bridge = getIrohBridge();
 await bridge.start({ alpns: ['my-app/1'] });
 const localNodeId = await bridge.nodeId();
 
-const session = await bridge.openSession({
-  nodeId: remoteNodeId,
+const session = await bridge.openTargetSession({
+  target: {
+    kind: 'endpoint-ticket',
+    ticket: remoteEndpointTicket,
+  },
   alpn: 'my-app/1',
-  addressHint, // required: direct socket, relay URL, or JSON ticket
 });
 const control = await session.openStream();
 const transfer = await session.openStream();
@@ -115,12 +119,14 @@ await session.close();
 await bridge.stop();
 ```
 
-For a single stream, `bridge.connect(options)` is enough. Repeated calls for the
-same node id and ALPN reuse the same native QUIC session automatically.
+For a single stream, `bridge.connectTarget(options)` is enough. Repeated calls
+for the same node id and ALPN reuse the same native QUIC session automatically.
 
-`addressHint` is required for mobile dialing today. It can be a direct address,
-a relay `https://…` URL, or a JSON ticket with usable transport addresses. A
-display-only value is not enough.
+`connect()` and `openSession()` remain source-compatible for existing
+integrations using `nodeId` plus `addressHint`. New integrations should prefer
+the typed target API: it accepts the canonical string emitted by the official
+`iroh-tickets` crate or an explicit endpoint address. Invalid addresses,
+ambiguous targets and identity mismatches fail before dialing.
 
 ## Documentation
 

@@ -11,6 +11,7 @@ API for React Native:
 - `is_running`
 - `node_id`
 - `connect` (opens a new stream and reuses the peer's QUIC session)
+- `connect_target` (typed official endpoint ticket or explicit endpoint address)
 - `send`
 - `is_stream_open`
 - `next_message`
@@ -36,6 +37,11 @@ called by the Android native module before installing the Rust JSI runtime.
 
 ## Dialing
 
-Mobile dialing currently requires an address hint. A bare node id or
-display-only relay id is rejected because it does not contain enough information
-to open the connection reliably.
+Mobile dialing requires usable addressing. New callers should use
+`connect_target` with either a canonical `iroh-tickets::EndpointTicket` string
+or an endpoint id plus direct socket addresses and/or a relay URL. The legacy
+`connect` export remains available for source compatibility.
+
+The parser rejects malformed addresses, tickets without addresses, ambiguous
+typed targets, and legacy JSON tickets that claim an endpoint id different from
+the requested peer. It never silently drops an invalid address.

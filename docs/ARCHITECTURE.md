@@ -75,25 +75,36 @@ not part of this package.
 - `bridge.start({ alpns })`
 - `bridge.stop()`
 - `bridge.nodeId()`
+- `bridge.connectTarget({ target, alpn, timeoutMs })`
 - `bridge.connect({ nodeId, alpn, addressHint, timeoutMs })`
 - `connection.send(bytes)`
 - `connection.onMessage(handler)`
 - `connection.onClose(handler)` / `connection.onError(handler)`
 - `connection.close()`
+- `bridge.openTargetSession(options)` / `session.openStream()`
 - `bridge.openSession(options)` / `session.openStream()` for explicit ownership
   of several independent streams.
+
+`connectTarget()` is additive and preferred for new integrations. It accepts an
+official endpoint ticket or an explicit endpoint id plus direct/relay
+addresses. Rust validates every address, rejects ambiguous/address-less
+targets, and keeps endpoint identity bound to the reachability data.
 
 `connect()` is backward compatible: it still returns one framed stream. Its
 native implementation now reuses a warm QUIC session, so calling it repeatedly
 does not force application traffic onto one ordered stream.
+
+The legacy JSON ticket parser also verifies that its embedded endpoint id
+matches the requested `nodeId`; it cannot redirect a request to another peer.
 
 The JavaScript session object owns streams, not the shared native QUIC handle.
 `session.close()` cancels its streams; the peer session remains reusable until
 LRU eviction or endpoint shutdown, so one feature cannot disconnect siblings.
 
 If native linking fails, `getIrohBridge()` returns an unavailable bridge object.
-Calling `start()` or `connect()` rejects with the underlying native/runtime
-error. This is intentional so host apps can diagnose and fallback explicitly.
+Calling `start()` or a dial method rejects with the underlying native/runtime
+error, normalized to `IrohBridgeError` with a stable recovery code. This is
+intentional so host apps can diagnose and fallback explicitly.
 
 ## Host App Responsibilities
 

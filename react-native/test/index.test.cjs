@@ -10,17 +10,27 @@ function loadBridgeRuntime() {
   let nextId = 1;
   const sent = [];
   const closed = [];
+  const connectCalls = [];
+  const connectTargetCalls = [];
   const inboxes = new Map();
+  const openStream = () => {
+    const id = `stream-${nextId++}`;
+    inboxes.set(id, []);
+    return id;
+  };
   const runtime = {
     bridgeVersion: () => '0.2.0',
     nodeId: () => 'test-node',
     start: () => {},
     stop: () => {},
     isRunning: () => true,
-    connect: () => {
-      const id = `stream-${nextId++}`;
-      inboxes.set(id, []);
-      return id;
+    connect: (...args) => {
+      connectCalls.push(args);
+      return openStream();
+    },
+    connectTarget: (...args) => {
+      connectTargetCalls.push(args);
+      return openStream();
     },
     send: (id, payload) => sent.push([id, new Uint8Array(payload)]),
     isStreamOpen: (id) => inboxes.has(id) && !closed.includes(id),
@@ -42,7 +52,16 @@ function loadBridgeRuntime() {
   };
   delete require.cache[indexPath];
   const api = require(indexPath);
-  return { bridge: api.getIrohBridge(), runtime, sent, closed, inboxes };
+  return {
+    api,
+    bridge: api.getIrohBridge(),
+    runtime,
+    sent,
+    closed,
+    inboxes,
+    connectCalls,
+    connectTargetCalls,
+  };
 }
 
 const options = {
@@ -97,4 +116,123 @@ test('onClose observes native remote closure without a message listener', async 
 
   assert.equal(stream.isClosed(), true);
   assert.equal(closeCount, 1);
+});
+
+test('legacy connect contract remains unchanged', async () => {
+  const { bridge, connectCalls } = loadBridgeRuntime();
+  const stream = await bridge.connect(options);
+
+  assert.deepEqual(connectCalls, [[
+    'peer-node',
+    'example/1',
+    '127.0.0.1:4433',
+    undefined,
+  ]]);
+  await stream.close();
+});
+
+test('typed endpoint address is normalized before crossing the native boundary', async () => {
+  const { bridge, connectTargetCalls } = loadBridgeRuntime();
+  const stream = await bridge.connectTarget({
+    target: {
+      kind: 'endpoint-address',
+      nodeId: ' peer-node ',
+      directAddresses: [' 127.0.0.1:4433 ', '127.0.0.1:4433'],
+      relayUrl: ' https://relay.example./ ',
+    },
+    alpn: ' example/1 ',
+    timeoutMs: 4500.9,
+  });
+
+  assert.deepEqual(connectTargetCalls, [[
+    'endpoint-address',
+    'peer-node',
+    undefined,
+    ['127.0.0.1:4433'],
+    'https://relay.example./',
+    'example/1',
+    4500,
+  ]]);
+  await stream.close();
+});
+
+test('typed official endpoint ticket does not require a duplicate node id', async () => {
+  const { bridge, connectTargetCalls } = loadBridgeRuntime();
+  const session = await bridge.openTargetSession({
+    target: {
+      kind: 'endpoint-ticket',
+      ticket: ' endpointexample ',
+    },
+    alpn: 'example/1',
+  });
+  const stream = await session.openStream();
+
+  assert.deepEqual(connectTargetCalls, [[
+    'endpoint-ticket',
+    undefined,
+    'endpointexample',
+    undefined,
+    undefined,
+    'example/1',
+    undefined,
+  ]]);
+  await session.close();
+  assert.equal(stream.isClosed(), true);
+});
+
+test('typed target validation rejects ambiguous or incomplete addressing', async () => {
+  const { bridge, connectTargetCalls } = loadBridgeRuntime();
+
+  await assert.rejects(
+    bridge.connectTarget({
+      target: { kind: 'endpoint-address', nodeId: 'peer-node' },
+      alpn: 'example/1',
+    }),
+    /requires a direct address or relayUrl/,
+  );
+  await assert.rejects(
+    bridge.connectTarget({
+      target: { kind: 'endpoint-ticket', ticket: '' },
+      alpn: 'example/1',
+    }),
+    /requires a non-empty ticket/,
+  );
+  await assert.rejects(
+    bridge.connectTarget({
+      target: {
+        kind: 'endpoint-ticket',
+        ticket: 'endpointexample',
+        nodeId: 'ambiguous-peer',
+      },
+      alpn: 'example/1',
+    }),
+    /accepts only the ticket field/,
+  );
+  assert.equal(connectTargetCalls.length, 0);
+});
+
+test('native failures expose a stable IrohBridgeError code', async () => {
+  const { api, bridge, runtime } = loadBridgeRuntime();
+  runtime.connectTarget = () => {
+    throw {
+      tag: 'InvalidTicket',
+      inner: { message: 'could not decode ticket' },
+    };
+  };
+
+  await assert.rejects(
+    bridge.connectTarget({
+      target: { kind: 'endpoint-ticket', ticket: 'endpointinvalid' },
+      alpn: 'example/1',
+    }),
+    (error) => {
+      assert.equal(error instanceof api.IrohBridgeError, true);
+      assert.equal(error.code, 'INVALID_TICKET');
+      assert.equal(
+        error.message,
+        'IrohBridgeError.InvalidTicket: could not decode ticket',
+      );
+      return true;
+    },
+  );
 });
