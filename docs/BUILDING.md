@@ -66,7 +66,9 @@ fast source-level check and does not replace the two platform builds.
 Both platform commands are mandatory for releases that add or remove a Rust
 export. The generated TypeScript contains UniFFI contract checksums, so
 publishing new JS against stale `.so`/`.xcframework` binaries is intentionally
-unsupported.
+unsupported. `npm run check:release-artifacts` now also checks that the iOS
+device library and Android jniLibs contain every UniFFI symbol exported by the
+generated C++.
 
 After regenerating artifacts:
 

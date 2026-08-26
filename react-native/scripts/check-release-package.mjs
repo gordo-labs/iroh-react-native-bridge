@@ -2,6 +2,7 @@ import { existsSync, readFileSync, statSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { checkAndroidNativeAbi, checkIosNativeAbi } from './check-native-abi.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const packageRoot = resolve(here, '..');
@@ -100,6 +101,15 @@ try {
   }
 } catch (error) {
   failures.push(`Unable to inspect npm packlist: ${error.message}`);
+}
+
+const iosAbi = checkIosNativeAbi(packageRoot);
+if (!iosAbi.ok) {
+  failures.push(iosAbi.error);
+}
+const androidAbi = checkAndroidNativeAbi(packageRoot);
+if (!androidAbi.ok) {
+  failures.push(androidAbi.error);
 }
 
 if (failures.length > 0) {

@@ -86,6 +86,50 @@ Check:
 - The native app was rebuilt.
 - The package's Android native module was autolinked.
 
+## iOS archive: `Undefined symbols` for `uniffi_iroh_mobile_bridge_*connect_target`
+
+`ubrn:generate` refreshes C++/JS bindings from the host Rust library. It does
+not rebuild `ReactNativeIrohBridgeFramework.xcframework`. If a new UniFFI
+export such as `connect_target` lands in generated C++ while the xcframework is
+still the previous binary, Xcode archive fails at link:
+
+```
+Undefined symbols for architecture arm64:
+  "_uniffi_iroh_mobile_bridge_fn_func_connect_target"
+  "_uniffi_iroh_mobile_bridge_checksum_func_connect_target"
+```
+
+Rebuild the iOS slice after any new Rust export:
+
+```bash
+cd react-native
+npm run ubrn:ios
+```
+
+Music Hub's `npm run ios:build:submit` now runs this check before `xcodebuild`
+and rebuilds the xcframework when the device library is stale.
+
+## Android CMake: undefined `uniffi_iroh_mobile_bridge_*connect_target`
+
+The same host-only `ubrn:generate` leftover affects Android. CMake links
+generated C++ against `android/src/main/jniLibs/*/libiroh_mobile_bridge.so`.
+If that `.so` is older than the C++ bindings, Ninja fails with:
+
+```
+undefined reference to `uniffi_iroh_mobile_bridge_fn_func_connect_target`
+undefined reference to `uniffi_iroh_mobile_bridge_checksum_func_connect_target`
+```
+
+Rebuild every JNI ABI after any new Rust export:
+
+```bash
+cd react-native
+npm run ubrn:android
+```
+
+Music Hub's `npm run android:build:submit` now runs this check before Gradle
+and rebuilds jniLibs when any ABI is stale.
+
 ## iOS: bridge works in JS but not in a TestFlight/build
 
 Check:

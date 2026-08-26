@@ -5,6 +5,9 @@ versions may still include API or packaging changes.
 
 ## Unreleased
 
+- `check-release-package` now fails if the iOS xcframework or Android jniLibs
+  are missing UniFFI symbols that the generated C++ bindings export, so a
+  host-only `ubrn:generate` cannot ship against a stale `libiroh_mobile_bridge`.
 - Added `connectTarget()` and `openTargetSession()` with a typed union for
   official Iroh `EndpointTicket` strings and explicit endpoint addresses.
 - Added deterministic `IrohBridgeError.code` values while preserving the
