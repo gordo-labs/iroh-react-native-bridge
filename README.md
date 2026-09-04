@@ -10,9 +10,11 @@ npm install @gordo-labs/react-native-iroh
 ```
 
 **Current line: `0.2.0` (alpha).** Source is on public `main` after
-[PR #1](https://github.com/gordo-labs/iroh-react-native-bridge/pull/1). The first
-npm registry release is still pending — until it lands, `npm install` will not
-resolve yet. Contributors linking a local checkout should follow
+[PR #1](https://github.com/gordo-labs/iroh-react-native-bridge/pull/1).
+`@gordo-labs/react-native-iroh@0.2.0` is published on npm
+([package page](https://www.npmjs.com/package/@gordo-labs/react-native-iroh)).
+`npm install @gordo-labs/react-native-iroh` resolves. Contributors linking a
+local checkout should follow
 [docs/BUILDING.md](./docs/BUILDING.md#local-app-integration).
 
 This repository is independent from Iroh/n0. It is maintained by Gordo Labs and
@@ -36,7 +38,7 @@ change before a stable 1.0.
 | CI on `main` | Green |
 | Native iOS xcframework + Android `.so` artifacts in tree | Present |
 | Physical-device dial + framed stream QA (Android, n0 relays) | Verified 2026-07-21 |
-| First public npm publish | **Pending** |
+| First public npm publish | Done (2026-08-06) |
 | npm trusted publishing / org token for `gordo-labs` | **Pending** |
 | Signed GitHub release tag `v0.2.0` | **Pending** |
 | Standalone public example app | Not yet |
@@ -179,13 +181,14 @@ Already in place on `main`:
 - [x] Tracked-file safety checks reject common credentials, private keys, `.env`
       files and generated archives.
 
-Operator gates before the first public npm release (`0.2.0`):
+First public npm release (`0.2.0`) is done. Remaining operator gates:
 
+- [x] First public npm publish of `@gordo-labs/react-native-iroh@0.2.0`
+      (2026-08-06, [npm](https://www.npmjs.com/package/@gordo-labs/react-native-iroh)).
 - [ ] Configure npm trusted publishing or a least-privilege automation token for
-      the `gordo-labs` scope.
+      the `gordo-labs` scope (needed for later releases).
 - [ ] Run the physical-device iOS and Android release checklist in
       [docs/RELEASING.md](./docs/RELEASING.md) against the packed tarball.
-- [ ] `npm publish --access public --provenance` from `react-native/`.
 - [ ] Create the matching signed Git tag `v0.2.0` and attach checksums to the
       GitHub release.
 

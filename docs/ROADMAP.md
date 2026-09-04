@@ -18,7 +18,7 @@
 - Smoke tests for generated JS wrapper behavior. ✅
 - Repeatable maintainer release procedure and npm provenance metadata. ✅
 
-- First public npm publish of `@gordo-labs/react-native-iroh@0.2.0`.
+- First public npm publish of `@gordo-labs/react-native-iroh@0.2.0`. ✅ (2026-08-06)
 - Add a public example app.
 - Document exact React Native and Expo version matrix.
 - Add release scripts for native artifact regeneration.

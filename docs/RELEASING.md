@@ -19,9 +19,11 @@ The package is not self-referential: `react-native` is a peer supplied by the
 host application, `@ubjs/core` is the only npm runtime dependency, and
 `uniffi-bindgen-react-native` is a build-time dependency used by the UBRN
 scripts. A `file:`, `workspace:` or `link:` specifier must never be present in
-the package metadata. Before the first publish, `npm view
-@gordo-labs/react-native-iroh version` returning `E404` is expected; validate
-the release tarball locally instead.
+the package metadata. `@gordo-labs/react-native-iroh@0.2.0` is already on the
+public registry
+(https://www.npmjs.com/package/@gordo-labs/react-native-iroh). `npm view
+@gordo-labs/react-native-iroh version` should return the latest published
+version. Validate the release tarball locally before publishing a new version.
 
 The package engine is `node >=22`, so Node 26 satisfies the declared range.
 Node 22 remains the reproducible maintainer toolchain because it is pinned by

@@ -29,7 +29,7 @@ generic Iroh transport package for any React Native app.
 
 - Remote: https://github.com/gordo-labs/iroh-react-native-bridge (public)
 - Default / release branch: `main` (PR #1 merged 2026-07-23)
-- Package line ready to publish: `@gordo-labs/react-native-iroh@0.2.0` (npm pending)
+- Package line published: [`@gordo-labs/react-native-iroh@0.2.0`](https://www.npmjs.com/package/@gordo-labs/react-native-iroh) (2026-08-06)
 
 ```bash
 git status --short --branch

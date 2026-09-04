@@ -12,8 +12,8 @@ protocols.
 
 ## Current Status
 
-Alpha. Public source is on `main`; first npm publish is the remaining release
-gate for `0.2.0`.
+Alpha. Public source is on `main`.
+`@gordo-labs/react-native-iroh@0.2.0` is published on npm (2026-08-06).
 
 Completed:
 
@@ -37,11 +37,11 @@ Completed:
 - [PR #1](https://github.com/gordo-labs/iroh-react-native-bridge/pull/1) merged
   to `main` with green CI (2026-07-23).
 
-Still required for the first public release (`0.2.0`):
+Remaining operator gates after the first public npm release (`0.2.0`, 2026-08-06):
 
-- npm trusted publishing / org token for the `gordo-labs` scope.
+- npm trusted publishing / org token for the `gordo-labs` scope (later releases).
 - Physical-device release checklist against the packed tarball.
-- `npm publish` + signed tag `v0.2.0` + GitHub release checksums.
+- Signed tag `v0.2.0` + GitHub release checksums.
 
 Still required before stable 1.0:
 

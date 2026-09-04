@@ -19,8 +19,6 @@ versions may still include API or packaging changes.
 - Added official `iroh-tickets` parsing and regenerated host TS/C++/JS bindings.
 - Hardened `npm run ubrn:generate` so it rebuilds the host Rust library and
   derives generated bindings from the current ABI instead of stale artifacts.
-- First public npm publication of `@gordo-labs/react-native-iroh@0.2.0`
-  (operator gate; not done yet).
 
 ## 0.2.0
 
@@ -43,7 +41,8 @@ versions may still include API or packaging changes.
 - Added the missing Android Gradle Plugin 7.3+ manifest to the package allowlist.
 - Merged release candidate to public `main` via
   [PR #1](https://github.com/gordo-labs/iroh-react-native-bridge/pull/1)
-  (2026-07-23). npm registry publish remains pending.
+  (2026-07-23). Published to npm on 2026-08-06:
+  https://www.npmjs.com/package/@gordo-labs/react-native-iroh
 
 ## 0.1.2
 
