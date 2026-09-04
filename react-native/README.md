@@ -19,8 +19,10 @@ and use `@ubjs/core` at runtime.
 npm install @gordo-labs/react-native-iroh
 ```
 
-The first npm registry publish is still pending. Until it lands, link a local
-checkout — see [Building → Local App Integration](../docs/BUILDING.md#local-app-integration).
+`0.2.0` is published on npm
+([package page](https://www.npmjs.com/package/@gordo-labs/react-native-iroh)).
+Contributors linking a local checkout should follow
+[Building → Local App Integration](../docs/BUILDING.md#local-app-integration).
 
 This package has one runtime dependency (`@ubjs/core`). The
 `uniffi-bindgen-react-native` generator is kept in `devDependencies` because it
