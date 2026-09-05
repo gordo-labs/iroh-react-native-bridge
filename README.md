@@ -9,7 +9,7 @@ Public package:
 npm install @gordo-labs/react-native-iroh
 ```
 
-**Current line: `0.2.0` (alpha).** Source is on public `main` after
+**Current line: `0.2.0` (beta).** Source is on public `main` after
 [PR #1](https://github.com/gordo-labs/iroh-react-native-bridge/pull/1).
 `@gordo-labs/react-native-iroh@0.2.0` is published on npm
 ([package page](https://www.npmjs.com/package/@gordo-labs/react-native-iroh)).
@@ -27,7 +27,7 @@ the maintained UniFFI-to-TypeScript/TurboModule generator used by this package.
 
 ## Status
 
-Alpha. Usable for controlled device testing. API and native packaging may still
+Beta. In real use. API and native packaging may still
 change before a stable 1.0.
 
 | Gate | State |

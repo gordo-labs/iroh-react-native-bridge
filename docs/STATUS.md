@@ -1,6 +1,6 @@
 # Status
 
-`iroh-react-native-bridge` is alpha software.
+`iroh-react-native-bridge` is beta software.
 
 It is good enough for controlled app integration and device testing. It is not
 yet a stable general-purpose React Native Iroh SDK.

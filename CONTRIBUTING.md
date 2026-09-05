@@ -2,7 +2,7 @@
 
 Thanks for helping improve `iroh-react-native-bridge`.
 
-This project is alpha infrastructure. Good contributions should either make the
+This project is beta infrastructure. Good contributions should either make the
 existing bridge more reliable or make its current limits easier to understand.
 Large API additions are welcome as proposals first, not surprise PRs.
 

@@ -2,10 +2,10 @@
   "name": "iroh-react-native-bridge",
   "slug": "iroh-react-native-bridge",
   "type": "react-native-native-module",
-  "status": "alpha",
+  "status": "beta",
   "description": "Standalone React Native TurboModule package for minimal Iroh P2P sessions using a Rust/UniFFI bridge.",
-  "lastAction": "2026-09-04T00:00:00Z",
-  "lastActionDescription": "Docs corrected: @gordo-labs/react-native-iroh@0.2.0 is published on npm (2026-08-06).",
+  "lastAction": "2026-09-05T00:00:00Z",
+  "lastActionDescription": "Public status moved from alpha to beta to match real use of 0.2.0.",
   "repository": {
     "local": "iroh-react-native-bridge",
     "remote": "https://github.com/gordo-labs/iroh-react-native-bridge",

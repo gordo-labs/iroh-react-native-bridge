@@ -3,7 +3,7 @@
 Generic React Native TurboModule for **Iroh endpoints** and **length-prefixed
 byte streams** on iOS and Android.
 
-This package is **alpha** (`0.2.0`). It targets modern React Native with the
+This package is **beta** (`0.2.0`). It targets modern React Native with the
 **New Architecture** enabled. It will **not** work in Expo Go (custom native
 modules cannot load there).
 

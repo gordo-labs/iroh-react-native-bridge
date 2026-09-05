@@ -27,7 +27,7 @@ React Native team.
 
 ## Status
 
-Alpha. Public source is on `main` (`0.2.0`).
+Beta. Public source is on `main` (`0.2.0`).
 `@gordo-labs/react-native-iroh@0.2.0` is published on npm
 (https://www.npmjs.com/package/@gordo-labs/react-native-iroh). API and packaging
 are not stable before 1.0 — keep docs honest about current limits and registry

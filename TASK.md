@@ -12,7 +12,7 @@ protocols.
 
 ## Current Status
 
-Alpha. Public source is on `main`.
+Beta. Public source is on `main`.
 `@gordo-labs/react-native-iroh@0.2.0` is published on npm (2026-08-06).
 
 Completed:
