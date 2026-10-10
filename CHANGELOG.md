@@ -3,8 +3,13 @@
 This project follows semantic versioning after 1.0. During 0.x, minor and patch
 versions may still include API or packaging changes.
 
-## Unreleased
+## Unreleased (0.3.0)
 
+- Added `startTcpForwarder()`: a loopback TCP listener that forwards each accepted
+  connection over its own bidirectional QUIC stream on the shared peer session,
+  with an optional per-stream preamble, single-flight session dial and
+  throughput counters (`stats()`). Bytes are pumped natively; nothing crosses the
+  JavaScript bridge. `bridge.stop()` also stops every forwarder.
 - `check-release-package` now fails if the iOS xcframework or Android jniLibs
   are missing UniFFI symbols that the generated C++ bindings export, so a
   host-only `ubrn:generate` cannot ship against a stale `libiroh_mobile_bridge`.

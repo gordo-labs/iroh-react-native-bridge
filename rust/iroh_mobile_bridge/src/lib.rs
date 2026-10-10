@@ -33,6 +33,12 @@ const MAX_INBOX_FRAMES: usize = 256;
 const MAX_INBOX_BYTES: usize = 16 * 1024 * 1024;
 const MAX_CACHED_SESSIONS: usize = 32;
 
+mod tcp_forward;
+pub use tcp_forward::{
+    start_tcp_forwarder, stop_tcp_forwarder, tcp_forwarder_stats, TcpForwarderInfo,
+    TcpForwarderOptions, TcpForwarderStats,
+};
+
 static STATE: OnceLock<Mutex<BridgeState>> = OnceLock::new();
 static NEXT_CONNECTION_ID: AtomicU64 = AtomicU64::new(1);
 static NEXT_SESSION_USE: AtomicU64 = AtomicU64::new(1);
@@ -564,6 +570,7 @@ fn start(alpns: Option<Vec<String>>) -> Result<(), IrohBridgeError> {
 /// Stop the Iroh endpoint and close all active connections.
 #[uniffi::export]
 fn stop() {
+    tcp_forward::stop_all_tcp_forwarders();
     let _ = with_state(|state| {
         for (_, connection) in state.connections.drain() {
             connection.closed.store(true, Ordering::SeqCst);
@@ -920,7 +927,7 @@ mod tests {
 
     #[test]
     fn test_bridge_version() {
-        assert_eq!(bridge_version(), "0.2.0");
+        assert_eq!(bridge_version(), "0.3.0");
     }
 
     #[test]
@@ -1227,6 +1234,126 @@ mod tests {
         close(first).unwrap();
         close(second).unwrap();
         runtime.block_on(server_task).expect("server task");
+        runtime.block_on(server.close());
+        stop();
+    }
+
+    #[test]
+    fn test_tcp_forwarder_gives_each_connection_its_own_stream() {
+        use std::io::{Read, Write};
+        let _guard = test_guard();
+        const ALPN: &str = "iroh-rn-test/tcp-forward/1";
+        const PREAMBLE: &[u8] = b"TEST\x01";
+        const BIG: usize = 512 * 1024;
+        stop();
+        start(Some(vec![ALPN.to_string()])).expect("client endpoint should start");
+        let runtime = with_state(|state| Ok(state.runtime.handle().clone())).unwrap();
+        let server = runtime
+            .block_on(async {
+                Endpoint::builder(iroh::endpoint::presets::Minimal)
+                    .relay_mode(RelayMode::Disabled)
+                    .alpns(vec![ALPN.as_bytes().to_vec()])
+                    .bind_addr((std::net::Ipv4Addr::LOCALHOST, 0))
+                    .map_err(err)?
+                    .bind()
+                    .await
+                    .map_err(err)
+            })
+            .expect("server endpoint should start");
+        let hint = serde_json::json!({
+            "id": server.id().to_z32(),
+            "addrs": server.addr().addrs.iter().map(ToString::to_string).collect::<Vec<_>>(),
+        })
+        .to_string();
+
+        // A tiny HTTP responder per stream: checks the preamble, answers /big or /small.
+        let server_task = runtime.spawn({
+            let server = server.clone();
+            async move {
+                let connection = server
+                    .accept()
+                    .await
+                    .expect("session")
+                    .await
+                    .expect("handshake");
+                let mut handlers = Vec::new();
+                for _ in 0..2 {
+                    let (mut send, mut recv) = connection.accept_bi().await.expect("stream");
+                    handlers.push(tokio::spawn(async move {
+                        let mut preamble = [0u8; 5];
+                        recv.read_exact(&mut preamble).await.expect("preamble");
+                        assert_eq!(&preamble, PREAMBLE);
+                        let mut request = Vec::new();
+                        let mut byte = [0u8; 1];
+                        while !request.ends_with(b"\r\n\r\n") {
+                            recv.read_exact(&mut byte).await.expect("request");
+                            request.push(byte[0]);
+                        }
+                        let body = if request.starts_with(b"GET /big") {
+                            vec![7u8; BIG]
+                        } else {
+                            b"pong".to_vec()
+                        };
+                        let head =
+                            format!("HTTP/1.1 200 OK\r\nContent-Length: {}\r\n\r\n", body.len());
+                        send.write_all(head.as_bytes()).await.expect("head");
+                        send.write_all(&body).await.expect("body");
+                        send.finish().expect("finish");
+                        let _ = send.stopped().await;
+                    }));
+                }
+                for handler in handlers {
+                    handler.await.expect("handler");
+                }
+                connection
+            }
+        });
+
+        let forwarder = start_tcp_forwarder(TcpForwarderOptions {
+            node_id: Some(server.id().to_z32()),
+            alpn: ALPN.to_string(),
+            address_hint: Some(hint),
+            target_kind: None,
+            endpoint_ticket: None,
+            direct_addresses: None,
+            relay_url: None,
+            listen_port: 0,
+            preamble: Some(PREAMBLE.to_vec()),
+            timeout_ms: Some(5_000),
+        })
+        .expect("forwarder");
+        assert!(forwarder.port > 0);
+
+        let fetch = |path: &'static str, port: u16| {
+            std::thread::spawn(move || {
+                let mut tcp = std::net::TcpStream::connect(("127.0.0.1", port)).expect("tcp");
+                tcp.write_all(format!("GET {path} HTTP/1.1\r\nHost: x\r\n\r\n").as_bytes())
+                    .expect("write");
+                let mut response = Vec::new();
+                tcp.read_to_end(&mut response).expect("read");
+                response
+            })
+        };
+        let big = fetch("/big", forwarder.port);
+        let small = fetch("/small", forwarder.port);
+        let small = small.join().unwrap();
+        let big = big.join().unwrap();
+        assert!(small.ends_with(b"pong"));
+        assert!(big.len() > BIG);
+
+        let stats = tcp_forwarder_stats(forwarder.id.clone()).expect("stats");
+        assert_eq!(stats.total_connections, 2);
+        assert_eq!(stats.failed_streams, 0);
+        assert!(stats.bytes_down >= (BIG + 4) as u64);
+        assert!(stats.bytes_up > 0);
+
+        stop_tcp_forwarder(forwarder.id.clone());
+        assert!(matches!(
+            tcp_forwarder_stats(forwarder.id),
+            Err(IrohBridgeError::NotConnected)
+        ));
+        let connection = runtime.block_on(server_task).expect("server task");
+        connection.close(0u32.into(), b"done");
         runtime.block_on(server.close());
         stop();
     }

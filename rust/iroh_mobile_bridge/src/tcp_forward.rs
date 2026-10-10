@@ -20,15 +20,15 @@ use iroh::{endpoint::Connection, EndpointAddr};
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     net::{TcpListener, TcpStream},
-    sync::watch,
+    sync::{watch, Mutex as AsyncMutex},
     task::JoinSet,
     time,
 };
 
 use super::{
-    cache_session, endpoint_addr_from_hint, endpoint_addr_from_typed_target, err,
-    normalize_alpn, open_bi_with_timeout, parse_endpoint_id, session_key, with_state,
-    IrohBridgeError, NEXT_SESSION_USE, DEFAULT_CONNECT_TIMEOUT_MS,
+    cache_session, endpoint_addr_from_hint, endpoint_addr_from_typed_target, err, normalize_alpn,
+    open_bi_with_timeout, parse_endpoint_id, session_key, with_state, IrohBridgeError,
+    DEFAULT_CONNECT_TIMEOUT_MS, NEXT_SESSION_USE,
 };
 
 /// A gap longer than this between received chunks ends a transfer burst for the stats.
@@ -126,12 +126,15 @@ fn resolve_target(options: &TcpForwarderOptions) -> Result<EndpointAddr, IrohBri
 }
 
 /// The cached session for this peer and ALPN, or a new one (cached for later streams).
+/// Single-flight: connections accepted together share one dial instead of each opening a session.
 async fn session(
     endpoint: &iroh::endpoint::Endpoint,
     addr: &EndpointAddr,
     alpn: &[u8],
     timeout: Duration,
+    dial_lock: &AsyncMutex<()>,
 ) -> Result<Connection, IrohBridgeError> {
+    let _dialing = dial_lock.lock().await;
     let key = session_key(&addr.id, alpn);
     let cached = with_state(|state| {
         Ok(state.sessions.get_mut(&key).and_then(|session| {
@@ -157,19 +160,34 @@ async fn session(
     Ok(connection)
 }
 
-async fn pump(
-    tcp: TcpStream,
+/// Everything a forwarded connection needs to reach the peer.
+struct Route {
     endpoint: iroh::endpoint::Endpoint,
     addr: EndpointAddr,
     alpn: Vec<u8>,
-    preamble: Arc<Vec<u8>>,
+    preamble: Vec<u8>,
     timeout: Duration,
+    dial_lock: AsyncMutex<()>,
+}
+
+async fn pump(
+    tcp: TcpStream,
+    route: Arc<Route>,
     stats: Arc<Mutex<StatsState>>,
 ) -> Result<(), IrohBridgeError> {
-    let connection = session(&endpoint, &addr, &alpn, timeout).await?;
+    let Route {
+        endpoint,
+        addr,
+        alpn,
+        preamble,
+        timeout,
+        dial_lock,
+    } = &*route;
+    let timeout = *timeout;
+    let connection = session(endpoint, addr, alpn, timeout, dial_lock).await?;
     let (mut send, mut recv) = open_bi_with_timeout(&connection, timeout).await?;
     if !preamble.is_empty() {
-        send.write_all(&preamble).await.map_err(err)?;
+        send.write_all(preamble).await.map_err(err)?;
     }
     let _ = tcp.set_nodelay(true);
     let (mut tcp_read, mut tcp_write) = tcp.into_split();
@@ -219,7 +237,7 @@ pub fn start_tcp_forwarder(
 ) -> Result<TcpForwarderInfo, IrohBridgeError> {
     let addr = resolve_target(&options)?;
     let alpn = normalize_alpn(&options.alpn)?;
-    let preamble = Arc::new(options.preamble.clone().unwrap_or_default());
+    let preamble = options.preamble.clone().unwrap_or_default();
     if preamble.len() > MAX_PREAMBLE_BYTES {
         return Err(err("preamble is too large"));
     }
@@ -241,11 +259,22 @@ pub fn start_tcp_forwarder(
             .map_err(err)
     })?;
     let port = listener.local_addr().map_err(err)?.port();
-    let id = format!("tcp-forwarder-{}", NEXT_FORWARDER_ID.fetch_add(1, Ordering::SeqCst));
+    let id = format!(
+        "tcp-forwarder-{}",
+        NEXT_FORWARDER_ID.fetch_add(1, Ordering::SeqCst)
+    );
     let (stop_tx, mut stop_rx) = watch::channel(false);
     let stats = Arc::new(Mutex::new(StatsState::default()));
 
     let loop_stats = stats.clone();
+    let route = Arc::new(Route {
+        endpoint,
+        addr,
+        alpn,
+        preamble,
+        timeout,
+        dial_lock: AsyncMutex::new(()),
+    });
     runtime.spawn(async move {
         let mut tasks = JoinSet::new();
         loop {
@@ -262,13 +291,9 @@ pub fn start_tcp_forwarder(
                         state.stats.active_connections += 1;
                     }
                     let stats = loop_stats.clone();
-                    let endpoint = endpoint.clone();
-                    let addr = addr.clone();
-                    let alpn = alpn.clone();
-                    let preamble = preamble.clone();
+                    let route = route.clone();
                     tasks.spawn(async move {
-                        let result =
-                            pump(tcp, endpoint, addr, alpn, preamble, timeout, stats.clone()).await;
+                        let result = pump(tcp, route, stats.clone()).await;
                         if let Ok(mut state) = stats.lock() {
                             state.stats.active_connections =
                                 state.stats.active_connections.saturating_sub(1);
@@ -307,7 +332,9 @@ pub fn stop_tcp_forwarder(id: String) {
 
 #[uniffi::export]
 pub fn tcp_forwarder_stats(id: String) -> Result<TcpForwarderStats, IrohBridgeError> {
-    let map = forwarders().lock().map_err(|_| IrohBridgeError::InternalError)?;
+    let map = forwarders()
+        .lock()
+        .map_err(|_| IrohBridgeError::InternalError)?;
     let forwarder = map.get(&id).ok_or(IrohBridgeError::NotConnected)?;
     let stats = forwarder
         .stats

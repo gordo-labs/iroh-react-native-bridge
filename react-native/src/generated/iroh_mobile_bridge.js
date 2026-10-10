@@ -21,6 +21,9 @@ var iroh_mobile_bridge_exports = {};
 __export(iroh_mobile_bridge_exports, {
   IrohBridgeError: () => IrohBridgeError,
   IrohBridgeError_Tags: () => IrohBridgeError_Tags,
+  TcpForwarderInfo: () => TcpForwarderInfo,
+  TcpForwarderOptions: () => TcpForwarderOptions,
+  TcpForwarderStats: () => TcpForwarderStats,
   bridgeVersion: () => bridgeVersion,
   close: () => close,
   connect: () => connect,
@@ -33,7 +36,10 @@ __export(iroh_mobile_bridge_exports, {
   nodeId: () => nodeId,
   send: () => send,
   start: () => start,
-  stop: () => stop
+  startTcpForwarder: () => startTcpForwarder,
+  stop: () => stop,
+  stopTcpForwarder: () => stopTcpForwarder,
+  tcpForwarderStats: () => tcpForwarderStats
 });
 module.exports = __toCommonJS(iroh_mobile_bridge_exports);
 
@@ -248,6 +254,27 @@ function start(alpns) {
     FfiConverterString.lift.bind(FfiConverterString)
   );
 }
+function startTcpForwarder(options) {
+  return ((__rb) => {
+    try {
+      return FfiConverterTypeTcpForwarderInfo.lift(__rb);
+    } finally {
+      iroh_mobile_bridge_ffi_default().rustbuffer_free(__rb);
+    }
+  })(uniffiCaller.rustCallWithError(
+    /*liftError:*/
+    FfiConverterTypeIrohBridgeError.lift.bind(FfiConverterTypeIrohBridgeError),
+    /*caller:*/
+    (callStatus) => {
+      return iroh_mobile_bridge_ffi_default().ubrn_uniffi_iroh_mobile_bridge_fn_func_start_tcp_forwarder(
+        FfiConverterTypeTcpForwarderOptions.lower(options, iroh_mobile_bridge_ffi_default().rustbuffer_alloc),
+        callStatus
+      );
+    },
+    /*liftString:*/
+    FfiConverterString.lift.bind(FfiConverterString)
+  ));
+}
 function stop() {
   uniffiCaller.rustCall(
     /*caller:*/
@@ -259,6 +286,40 @@ function stop() {
     /*liftString:*/
     FfiConverterString.lift.bind(FfiConverterString)
   );
+}
+function stopTcpForwarder(id) {
+  uniffiCaller.rustCall(
+    /*caller:*/
+    (callStatus) => {
+      iroh_mobile_bridge_ffi_default().ubrn_uniffi_iroh_mobile_bridge_fn_func_stop_tcp_forwarder(
+        FfiConverterString.lower(id, iroh_mobile_bridge_ffi_default().rustbuffer_alloc),
+        callStatus
+      );
+    },
+    /*liftString:*/
+    FfiConverterString.lift.bind(FfiConverterString)
+  );
+}
+function tcpForwarderStats(id) {
+  return ((__rb) => {
+    try {
+      return FfiConverterTypeTcpForwarderStats.lift(__rb);
+    } finally {
+      iroh_mobile_bridge_ffi_default().rustbuffer_free(__rb);
+    }
+  })(uniffiCaller.rustCallWithError(
+    /*liftError:*/
+    FfiConverterTypeIrohBridgeError.lift.bind(FfiConverterTypeIrohBridgeError),
+    /*caller:*/
+    (callStatus) => {
+      return iroh_mobile_bridge_ffi_default().ubrn_uniffi_iroh_mobile_bridge_fn_func_tcp_forwarder_stats(
+        FfiConverterString.lower(id, iroh_mobile_bridge_ffi_default().rustbuffer_alloc),
+        callStatus
+      );
+    },
+    /*liftString:*/
+    FfiConverterString.lift.bind(FfiConverterString)
+  ));
 }
 var stringConverter = (() => {
   const encoder = new TextEncoder();
@@ -293,6 +354,120 @@ var stringConverter = (() => {
   };
 })();
 var FfiConverterString = (0, import_core.uniffiCreateFfiConverterString)(stringConverter);
+var TcpForwarderInfo = (() => {
+  const defaults = () => ({});
+  const create = (() => {
+    return (0, import_core.uniffiCreateRecord)(defaults);
+  })();
+  return Object.freeze({
+    create,
+    new: create,
+    defaults: () => Object.freeze(defaults())
+  });
+})();
+var FfiConverterTypeTcpForwarderInfo = (() => {
+  class FFIConverter extends import_core.AbstractFfiConverterByteArray {
+    read(from) {
+      return {
+        id: FfiConverterString.read(from),
+        port: import_core.FfiConverterUInt16.read(from)
+      };
+    }
+    write(value, into) {
+      FfiConverterString.write(value.id, into);
+      import_core.FfiConverterUInt16.write(value.port, into);
+    }
+    allocationSize(value) {
+      return FfiConverterString.allocationSize(value.id) + import_core.FfiConverterUInt16.allocationSize(value.port);
+    }
+  }
+  ;
+  return new FFIConverter();
+})();
+var TcpForwarderOptions = (() => {
+  const defaults = () => ({});
+  const create = (() => {
+    return (0, import_core.uniffiCreateRecord)(defaults);
+  })();
+  return Object.freeze({
+    create,
+    new: create,
+    defaults: () => Object.freeze(defaults())
+  });
+})();
+var FfiConverterTypeTcpForwarderOptions = (() => {
+  class FFIConverter extends import_core.AbstractFfiConverterByteArray {
+    read(from) {
+      return {
+        nodeId: FfiConverterOptionalString.read(from),
+        alpn: FfiConverterString.read(from),
+        addressHint: FfiConverterOptionalString.read(from),
+        targetKind: FfiConverterOptionalString.read(from),
+        endpointTicket: FfiConverterOptionalString.read(from),
+        directAddresses: FfiConverterOptionalSequenceString.read(from),
+        relayUrl: FfiConverterOptionalString.read(from),
+        listenPort: import_core.FfiConverterUInt16.read(from),
+        preamble: FfiConverterOptionalBytes.read(from),
+        timeoutMs: FfiConverterOptionalUInt32.read(from)
+      };
+    }
+    write(value, into) {
+      FfiConverterOptionalString.write(value.nodeId, into);
+      FfiConverterString.write(value.alpn, into);
+      FfiConverterOptionalString.write(value.addressHint, into);
+      FfiConverterOptionalString.write(value.targetKind, into);
+      FfiConverterOptionalString.write(value.endpointTicket, into);
+      FfiConverterOptionalSequenceString.write(value.directAddresses, into);
+      FfiConverterOptionalString.write(value.relayUrl, into);
+      import_core.FfiConverterUInt16.write(value.listenPort, into);
+      FfiConverterOptionalBytes.write(value.preamble, into);
+      FfiConverterOptionalUInt32.write(value.timeoutMs, into);
+    }
+    allocationSize(value) {
+      return FfiConverterOptionalString.allocationSize(value.nodeId) + FfiConverterString.allocationSize(value.alpn) + FfiConverterOptionalString.allocationSize(value.addressHint) + FfiConverterOptionalString.allocationSize(value.targetKind) + FfiConverterOptionalString.allocationSize(value.endpointTicket) + FfiConverterOptionalSequenceString.allocationSize(value.directAddresses) + FfiConverterOptionalString.allocationSize(value.relayUrl) + import_core.FfiConverterUInt16.allocationSize(value.listenPort) + FfiConverterOptionalBytes.allocationSize(value.preamble) + FfiConverterOptionalUInt32.allocationSize(value.timeoutMs);
+    }
+  }
+  ;
+  return new FFIConverter();
+})();
+var TcpForwarderStats = (() => {
+  const defaults = () => ({});
+  const create = (() => {
+    return (0, import_core.uniffiCreateRecord)(defaults);
+  })();
+  return Object.freeze({
+    create,
+    new: create,
+    defaults: () => Object.freeze(defaults())
+  });
+})();
+var FfiConverterTypeTcpForwarderStats = (() => {
+  class FFIConverter extends import_core.AbstractFfiConverterByteArray {
+    read(from) {
+      return {
+        activeConnections: import_core.FfiConverterUInt32.read(from),
+        totalConnections: import_core.FfiConverterUInt64.read(from),
+        failedStreams: import_core.FfiConverterUInt64.read(from),
+        bytesUp: import_core.FfiConverterUInt64.read(from),
+        bytesDown: import_core.FfiConverterUInt64.read(from),
+        activeDownMs: import_core.FfiConverterUInt64.read(from)
+      };
+    }
+    write(value, into) {
+      import_core.FfiConverterUInt32.write(value.activeConnections, into);
+      import_core.FfiConverterUInt64.write(value.totalConnections, into);
+      import_core.FfiConverterUInt64.write(value.failedStreams, into);
+      import_core.FfiConverterUInt64.write(value.bytesUp, into);
+      import_core.FfiConverterUInt64.write(value.bytesDown, into);
+      import_core.FfiConverterUInt64.write(value.activeDownMs, into);
+    }
+    allocationSize(value) {
+      return import_core.FfiConverterUInt32.allocationSize(value.activeConnections) + import_core.FfiConverterUInt64.allocationSize(value.totalConnections) + import_core.FfiConverterUInt64.allocationSize(value.failedStreams) + import_core.FfiConverterUInt64.allocationSize(value.bytesUp) + import_core.FfiConverterUInt64.allocationSize(value.bytesDown) + import_core.FfiConverterUInt64.allocationSize(value.activeDownMs);
+    }
+  }
+  ;
+  return new FFIConverter();
+})();
 var IrohBridgeError_Tags = /* @__PURE__ */ ((IrohBridgeError_Tags2) => {
   IrohBridgeError_Tags2["AlreadyStarted"] = "AlreadyStarted";
   IrohBridgeError_Tags2["NotStarted"] = "NotStarted";
@@ -679,10 +854,10 @@ var FfiConverterTypeIrohBridgeError = (() => {
   return new FFIConverter();
 })();
 var FfiConverterOptionalString = new import_core.FfiConverterOptional(FfiConverterString);
-var FfiConverterOptionalUInt32 = new import_core.FfiConverterOptional(import_core.FfiConverterUInt32);
 var FfiConverterSequenceString = new import_core.FfiConverterArray(FfiConverterString);
 var FfiConverterOptionalSequenceString = new import_core.FfiConverterOptional(FfiConverterSequenceString);
 var FfiConverterOptionalBytes = new import_core.FfiConverterOptional(import_core.FfiConverterArrayBuffer);
+var FfiConverterOptionalUInt32 = new import_core.FfiConverterOptional(import_core.FfiConverterUInt32);
 function uniffiEnsureInitialized() {
   const bindingsContractVersion = 30;
   const scaffoldingContractVersion = iroh_mobile_bridge_ffi_default().ubrn_ffi_iroh_mobile_bridge_uniffi_contract_version();
@@ -722,20 +897,35 @@ function uniffiEnsureInitialized() {
   if (iroh_mobile_bridge_ffi_default().ubrn_uniffi_iroh_mobile_bridge_checksum_func_start() !== 42673) {
     throw new import_core.UniffiInternalError.ApiChecksumMismatch("uniffi_iroh_mobile_bridge_checksum_func_start");
   }
+  if (iroh_mobile_bridge_ffi_default().ubrn_uniffi_iroh_mobile_bridge_checksum_func_start_tcp_forwarder() !== 37349) {
+    throw new import_core.UniffiInternalError.ApiChecksumMismatch("uniffi_iroh_mobile_bridge_checksum_func_start_tcp_forwarder");
+  }
   if (iroh_mobile_bridge_ffi_default().ubrn_uniffi_iroh_mobile_bridge_checksum_func_stop() !== 53683) {
     throw new import_core.UniffiInternalError.ApiChecksumMismatch("uniffi_iroh_mobile_bridge_checksum_func_stop");
+  }
+  if (iroh_mobile_bridge_ffi_default().ubrn_uniffi_iroh_mobile_bridge_checksum_func_stop_tcp_forwarder() !== 36656) {
+    throw new import_core.UniffiInternalError.ApiChecksumMismatch("uniffi_iroh_mobile_bridge_checksum_func_stop_tcp_forwarder");
+  }
+  if (iroh_mobile_bridge_ffi_default().ubrn_uniffi_iroh_mobile_bridge_checksum_func_tcp_forwarder_stats() !== 58865) {
+    throw new import_core.UniffiInternalError.ApiChecksumMismatch("uniffi_iroh_mobile_bridge_checksum_func_tcp_forwarder_stats");
   }
 }
 var iroh_mobile_bridge_default = Object.freeze({
   initialize: uniffiEnsureInitialized,
   converters: {
-    FfiConverterTypeIrohBridgeError
+    FfiConverterTypeIrohBridgeError,
+    FfiConverterTypeTcpForwarderInfo,
+    FfiConverterTypeTcpForwarderOptions,
+    FfiConverterTypeTcpForwarderStats
   }
 });
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
   IrohBridgeError,
   IrohBridgeError_Tags,
+  TcpForwarderInfo,
+  TcpForwarderOptions,
+  TcpForwarderStats,
   bridgeVersion,
   close,
   connect,
@@ -747,5 +937,8 @@ var iroh_mobile_bridge_default = Object.freeze({
   nodeId,
   send,
   start,
-  stop
+  startTcpForwarder,
+  stop,
+  stopTcpForwarder,
+  tcpForwarderStats
 });

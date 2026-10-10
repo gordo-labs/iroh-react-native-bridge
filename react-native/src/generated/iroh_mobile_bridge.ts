@@ -6,7 +6,7 @@
 import nativeModule from "./iroh_mobile_bridge-ffi";
 import { type UniffiRustFutureContinuationCallback, type UniffiForeignFutureDroppedCallback, type UniffiForeignFutureDroppedCallbackStruct,
 } from "./iroh_mobile_bridge-ffi";
-import { type UniffiByteArray, AbstractFfiConverterByteArray, FfiConverterArray, FfiConverterArrayBuffer, FfiConverterBool, FfiConverterInt32, FfiConverterOptional, FfiConverterUInt32, FfiConverterUInt64, FfiConverterUInt8, RustBuffer, UniffiError, UniffiInternalError, UniffiRustCaller, uniffiCreateFfiConverterString, uniffiTypeNameSymbol, variantOrdinalSymbol,
+import { type UniffiByteArray, AbstractFfiConverterByteArray, FfiConverterArray, FfiConverterArrayBuffer, FfiConverterBool, FfiConverterInt32, FfiConverterOptional, FfiConverterUInt16, FfiConverterUInt32, FfiConverterUInt64, FfiConverterUInt8, RustBuffer, UniffiError, UniffiInternalError, UniffiRustCaller, uniffiCreateFfiConverterString, uniffiCreateRecord, uniffiTypeNameSymbol, variantOrdinalSymbol,
 } from "@ubjs/core";
 const uniffiCaller = new UniffiRustCaller(() => ({ code: 0 }));
 
@@ -221,6 +221,27 @@ export function start(alpns: Array<string> | undefined): void /*throws*/ {uniffi
     }
 
 /**
+ * Listen on 127.0.0.1 and forward every accepted TCP connection over its own QUIC stream.
+ */
+export function startTcpForwarder(options: TcpForwarderOptions): TcpForwarderInfo /*throws*/ {
+    return ((__rb: Uint8Array) => {
+        try {
+            return FfiConverterTypeTcpForwarderInfo.lift(__rb);
+        } finally {
+            nativeModule().rustbuffer_free(__rb);
+        }
+    })(uniffiCaller.rustCallWithError(
+            /*liftError:*/ FfiConverterTypeIrohBridgeError.lift.bind(FfiConverterTypeIrohBridgeError),
+            /*caller:*/ (callStatus) => {
+                return nativeModule().ubrn_uniffi_iroh_mobile_bridge_fn_func_start_tcp_forwarder(
+        FfiConverterTypeTcpForwarderOptions.lower(options, nativeModule().rustbuffer_alloc),
+                callStatus);
+            },
+            /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+    ));
+    }
+
+/**
  * Stop the Iroh endpoint and close all active connections.
  */
 export function stop(): void {uniffiCaller.rustCall(
@@ -229,6 +250,36 @@ export function stop(): void {uniffiCaller.rustCall(
             },
             /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
     );
+    }
+
+/**
+ * Stop listening and close every connection of this forwarder. Unknown ids are ignored.
+ */
+export function stopTcpForwarder(id: string): void {uniffiCaller.rustCall(
+            /*caller:*/ (callStatus) => { nativeModule().ubrn_uniffi_iroh_mobile_bridge_fn_func_stop_tcp_forwarder(
+        FfiConverterString.lower(id, nativeModule().rustbuffer_alloc),
+                callStatus);
+            },
+            /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+    );
+    }
+
+export function tcpForwarderStats(id: string): TcpForwarderStats /*throws*/ {
+    return ((__rb: Uint8Array) => {
+        try {
+            return FfiConverterTypeTcpForwarderStats.lift(__rb);
+        } finally {
+            nativeModule().rustbuffer_free(__rb);
+        }
+    })(uniffiCaller.rustCallWithError(
+            /*liftError:*/ FfiConverterTypeIrohBridgeError.lift.bind(FfiConverterTypeIrohBridgeError),
+            /*caller:*/ (callStatus) => {
+                return nativeModule().ubrn_uniffi_iroh_mobile_bridge_fn_func_tcp_forwarder_stats(
+        FfiConverterString.lower(id, nativeModule().rustbuffer_alloc),
+                callStatus);
+            },
+            /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+    ));
     }
 
 // Hermes (React Native ≥ 0.74) ships TextEncoder and encodeInto, but not
@@ -282,6 +333,206 @@ const stringConverter = (() => {
     };
 })();
 const FfiConverterString = uniffiCreateFfiConverterString(stringConverter);
+
+export type TcpForwarderInfo = {
+    id: string,
+    port: number
+}
+
+/**
+ * Generated factory for {@link TcpForwarderInfo} record objects.
+ */
+export const TcpForwarderInfo = (() => {
+    const defaults = () => ({
+    });
+    const create = (() => {
+        return uniffiCreateRecord<TcpForwarderInfo, ReturnType<typeof defaults>>(defaults);
+    })();
+    return Object.freeze({
+        create,
+        new: create,
+        defaults: () => Object.freeze(defaults()) as Partial<TcpForwarderInfo>,
+    });
+})();
+
+const FfiConverterTypeTcpForwarderInfo = (() => {
+    type TypeName = TcpForwarderInfo;
+    class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+        read(from: RustBuffer): TypeName {
+            return {
+                id: FfiConverterString.read(from),
+                port: FfiConverterUInt16.read(from)
+            };
+        }
+        write(value: TypeName, into: RustBuffer): void {
+            FfiConverterString.write(value.id, into);
+            FfiConverterUInt16.write(value.port, into);
+        }
+        allocationSize(value: TypeName): number {
+            return FfiConverterString.allocationSize(value.id) +
+             FfiConverterUInt16.allocationSize(value.port);
+
+        }
+    };
+    return new FFIConverter();
+})();
+
+/**
+ * Where and how to forward.
+ */
+export type TcpForwarderOptions = {
+    /**
+     * Remote endpoint id (z-base-32). Required unless `endpoint_ticket` is given.
+     */
+    nodeId?: string,
+    alpn: string,
+    /**
+     * Legacy free-form address hint, as accepted by `connect`.
+     */
+    addressHint?: string,
+    /**
+     * Typed target, as accepted by `connect_target`: "endpoint-ticket" or "endpoint-address".
+     */
+    targetKind?: string,
+    endpointTicket?: string,
+    directAddresses?: Array<string>,
+    relayUrl?: string,
+    /**
+     * Loopback port to listen on; 0 picks a free one.
+     */
+    listenPort: number,
+    /**
+     * Bytes written at the start of every forwarded stream.
+     */
+    preamble?: ArrayBuffer,
+    timeoutMs?: number
+}
+
+/**
+ * Generated factory for {@link TcpForwarderOptions} record objects.
+ */
+export const TcpForwarderOptions = (() => {
+    const defaults = () => ({
+    });
+    const create = (() => {
+        return uniffiCreateRecord<TcpForwarderOptions, ReturnType<typeof defaults>>(defaults);
+    })();
+    return Object.freeze({
+        create,
+        new: create,
+        defaults: () => Object.freeze(defaults()) as Partial<TcpForwarderOptions>,
+    });
+})();
+
+const FfiConverterTypeTcpForwarderOptions = (() => {
+    type TypeName = TcpForwarderOptions;
+    class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+        read(from: RustBuffer): TypeName {
+            return {
+                nodeId: FfiConverterOptionalString.read(from),
+                alpn: FfiConverterString.read(from),
+                addressHint: FfiConverterOptionalString.read(from),
+                targetKind: FfiConverterOptionalString.read(from),
+                endpointTicket: FfiConverterOptionalString.read(from),
+                directAddresses: FfiConverterOptionalSequenceString.read(from),
+                relayUrl: FfiConverterOptionalString.read(from),
+                listenPort: FfiConverterUInt16.read(from),
+                preamble: FfiConverterOptionalBytes.read(from),
+                timeoutMs: FfiConverterOptionalUInt32.read(from)
+            };
+        }
+        write(value: TypeName, into: RustBuffer): void {
+            FfiConverterOptionalString.write(value.nodeId, into);
+            FfiConverterString.write(value.alpn, into);
+            FfiConverterOptionalString.write(value.addressHint, into);
+            FfiConverterOptionalString.write(value.targetKind, into);
+            FfiConverterOptionalString.write(value.endpointTicket, into);
+            FfiConverterOptionalSequenceString.write(value.directAddresses, into);
+            FfiConverterOptionalString.write(value.relayUrl, into);
+            FfiConverterUInt16.write(value.listenPort, into);
+            FfiConverterOptionalBytes.write(value.preamble, into);
+            FfiConverterOptionalUInt32.write(value.timeoutMs, into);
+        }
+        allocationSize(value: TypeName): number {
+            return FfiConverterOptionalString.allocationSize(value.nodeId) +
+             FfiConverterString.allocationSize(value.alpn) +
+             FfiConverterOptionalString.allocationSize(value.addressHint) +
+             FfiConverterOptionalString.allocationSize(value.targetKind) +
+             FfiConverterOptionalString.allocationSize(value.endpointTicket) +
+             FfiConverterOptionalSequenceString.allocationSize(value.directAddresses) +
+             FfiConverterOptionalString.allocationSize(value.relayUrl) +
+             FfiConverterUInt16.allocationSize(value.listenPort) +
+             FfiConverterOptionalBytes.allocationSize(value.preamble) +
+             FfiConverterOptionalUInt32.allocationSize(value.timeoutMs);
+
+        }
+    };
+    return new FFIConverter();
+})();
+
+/**
+ * Counters since the forwarder started. `active_down_ms` only counts time while data was
+ * arriving (bursts across all connections), so `bytes_down * 8 / active_down_ms` is the
+ * route throughput in kbit/s.
+ */
+export type TcpForwarderStats = {
+    activeConnections: number,
+    totalConnections: bigint,
+    failedStreams: bigint,
+    bytesUp: bigint,
+    bytesDown: bigint,
+    activeDownMs: bigint
+}
+
+/**
+ * Generated factory for {@link TcpForwarderStats} record objects.
+ */
+export const TcpForwarderStats = (() => {
+    const defaults = () => ({
+    });
+    const create = (() => {
+        return uniffiCreateRecord<TcpForwarderStats, ReturnType<typeof defaults>>(defaults);
+    })();
+    return Object.freeze({
+        create,
+        new: create,
+        defaults: () => Object.freeze(defaults()) as Partial<TcpForwarderStats>,
+    });
+})();
+
+const FfiConverterTypeTcpForwarderStats = (() => {
+    type TypeName = TcpForwarderStats;
+    class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+        read(from: RustBuffer): TypeName {
+            return {
+                activeConnections: FfiConverterUInt32.read(from),
+                totalConnections: FfiConverterUInt64.read(from),
+                failedStreams: FfiConverterUInt64.read(from),
+                bytesUp: FfiConverterUInt64.read(from),
+                bytesDown: FfiConverterUInt64.read(from),
+                activeDownMs: FfiConverterUInt64.read(from)
+            };
+        }
+        write(value: TypeName, into: RustBuffer): void {
+            FfiConverterUInt32.write(value.activeConnections, into);
+            FfiConverterUInt64.write(value.totalConnections, into);
+            FfiConverterUInt64.write(value.failedStreams, into);
+            FfiConverterUInt64.write(value.bytesUp, into);
+            FfiConverterUInt64.write(value.bytesDown, into);
+            FfiConverterUInt64.write(value.activeDownMs, into);
+        }
+        allocationSize(value: TypeName): number {
+            return FfiConverterUInt32.allocationSize(value.activeConnections) +
+             FfiConverterUInt64.allocationSize(value.totalConnections) +
+             FfiConverterUInt64.allocationSize(value.failedStreams) +
+             FfiConverterUInt64.allocationSize(value.bytesUp) +
+             FfiConverterUInt64.allocationSize(value.bytesDown) +
+             FfiConverterUInt64.allocationSize(value.activeDownMs);
+
+        }
+    };
+    return new FFIConverter();
+})();
 
 
 // Error type: IrohBridgeError
@@ -769,9 +1020,6 @@ const FfiConverterTypeIrohBridgeError = (() => {
 // FfiConverter for string | undefined
 const FfiConverterOptionalString = new FfiConverterOptional(FfiConverterString);
 
-// FfiConverter for number | undefined
-const FfiConverterOptionalUInt32 = new FfiConverterOptional(FfiConverterUInt32);
-
 // FfiConverter for Array<string>
 const FfiConverterSequenceString = new FfiConverterArray(FfiConverterString);
 
@@ -780,6 +1028,9 @@ const FfiConverterOptionalSequenceString = new FfiConverterOptional(FfiConverter
 
 // FfiConverter for ArrayBuffer | undefined
 const FfiConverterOptionalBytes = new FfiConverterOptional(FfiConverterArrayBuffer);
+
+// FfiConverter for number | undefined
+const FfiConverterOptionalUInt32 = new FfiConverterOptional(FfiConverterUInt32);
 
 
 /**
@@ -833,8 +1084,17 @@ function uniffiEnsureInitialized() {
     if (nativeModule().ubrn_uniffi_iroh_mobile_bridge_checksum_func_start() !== 42673) {
         throw new UniffiInternalError.ApiChecksumMismatch("uniffi_iroh_mobile_bridge_checksum_func_start");
     }
+    if (nativeModule().ubrn_uniffi_iroh_mobile_bridge_checksum_func_start_tcp_forwarder() !== 37349) {
+        throw new UniffiInternalError.ApiChecksumMismatch("uniffi_iroh_mobile_bridge_checksum_func_start_tcp_forwarder");
+    }
     if (nativeModule().ubrn_uniffi_iroh_mobile_bridge_checksum_func_stop() !== 53683) {
         throw new UniffiInternalError.ApiChecksumMismatch("uniffi_iroh_mobile_bridge_checksum_func_stop");
+    }
+    if (nativeModule().ubrn_uniffi_iroh_mobile_bridge_checksum_func_stop_tcp_forwarder() !== 36656) {
+        throw new UniffiInternalError.ApiChecksumMismatch("uniffi_iroh_mobile_bridge_checksum_func_stop_tcp_forwarder");
+    }
+    if (nativeModule().ubrn_uniffi_iroh_mobile_bridge_checksum_func_tcp_forwarder_stats() !== 58865) {
+        throw new UniffiInternalError.ApiChecksumMismatch("uniffi_iroh_mobile_bridge_checksum_func_tcp_forwarder_stats");
     }
 
     }
@@ -843,5 +1103,8 @@ export default Object.freeze({
   initialize: uniffiEnsureInitialized,
   converters: {
     FfiConverterTypeIrohBridgeError,
+    FfiConverterTypeTcpForwarderInfo,
+    FfiConverterTypeTcpForwarderOptions,
+    FfiConverterTypeTcpForwarderStats,
   }
 });

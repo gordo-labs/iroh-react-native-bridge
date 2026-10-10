@@ -12,6 +12,8 @@ function loadBridgeRuntime() {
   const closed = [];
   const connectCalls = [];
   const connectTargetCalls = [];
+  const forwarderCalls = [];
+  const stoppedForwarders = [];
   const inboxes = new Map();
   const openStream = () => {
     const id = `stream-${nextId++}`;
@@ -36,6 +38,19 @@ function loadBridgeRuntime() {
     isStreamOpen: (id) => inboxes.has(id) && !closed.includes(id),
     nextMessage: (id) => inboxes.get(id)?.shift(),
     close: (id) => closed.push(id),
+    startTcpForwarder: (opts) => {
+      forwarderCalls.push(opts);
+      return { id: 'tcp-forwarder-1', port: 41234 };
+    },
+    tcpForwarderStats: () => ({
+      activeConnections: 1,
+      totalConnections: 3n,
+      failedStreams: 0n,
+      bytesUp: 120n,
+      bytesDown: 64000n,
+      activeDownMs: 500n,
+    }),
+    stopTcpForwarder: (id) => stoppedForwarders.push(id),
   };
 
   require.cache[nativePath] = {
@@ -61,6 +76,8 @@ function loadBridgeRuntime() {
     inboxes,
     connectCalls,
     connectTargetCalls,
+    forwarderCalls,
+    stoppedForwarders,
   };
 }
 
@@ -235,4 +252,41 @@ test('native failures expose a stable IrohBridgeError code', async () => {
       return true;
     },
   );
+});
+
+test('TCP forwarder passes a validated target and preamble to native and reports numeric stats', async () => {
+  const { bridge, forwarderCalls, stoppedForwarders } = loadBridgeRuntime();
+  const forwarder = await bridge.startTcpForwarder({
+    target: { kind: 'endpoint-address', nodeId: ' peer-node ', directAddresses: ['127.0.0.1:4433'] },
+    alpn: 'example/1',
+    preamble: Uint8Array.from([84, 77, 72, 83, 1]),
+  });
+  assert.equal(forwarder.port, 41234);
+  assert.equal(forwarderCalls.length, 1);
+  const call = forwarderCalls[0];
+  assert.equal(call.targetKind, 'endpoint-address');
+  assert.equal(call.nodeId, 'peer-node');
+  assert.equal(call.listenPort, 0);
+  assert.deepEqual([...new Uint8Array(call.preamble)], [84, 77, 72, 83, 1]);
+  assert.deepEqual(forwarder.stats(), {
+    activeConnections: 1,
+    totalConnections: 3,
+    failedStreams: 0,
+    bytesUp: 120,
+    bytesDown: 64000,
+    activeDownMs: 500,
+  });
+  await forwarder.stop();
+  await forwarder.stop();
+  assert.deepEqual(stoppedForwarders, ['tcp-forwarder-1']);
+  assert.equal(forwarder.isStopped(), true);
+});
+
+test('TCP forwarder rejects invalid ports before crossing the native boundary', async () => {
+  const { bridge, forwarderCalls } = loadBridgeRuntime();
+  await assert.rejects(
+    bridge.startTcpForwarder({ ...options, listenPort: 70000 }),
+    /listenPort/,
+  );
+  assert.equal(forwarderCalls.length, 0);
 });

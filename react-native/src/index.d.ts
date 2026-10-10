@@ -67,6 +67,32 @@ export declare class IrohBridgeError extends Error {
   readonly cause?: unknown;
 }
 
+export type IrohTcpForwarderOptions = (IrohConnectOptions | IrohConnectTargetOptions) & {
+  /** Loopback port to listen on; 0 (default) picks a free one. */
+  listenPort?: number;
+  /** Bytes written at the start of every forwarded stream, before any TCP data. */
+  preamble?: Uint8Array;
+};
+
+export type IrohTcpForwarderStats = {
+  activeConnections: number;
+  totalConnections: number;
+  failedStreams: number;
+  bytesUp: number;
+  bytesDown: number;
+  /** Milliseconds during which data was arriving; bytesDown * 8 / activeDownMs = kbit/s. */
+  activeDownMs: number;
+};
+
+export type IrohTcpForwarder = {
+  readonly id: string;
+  /** Port on 127.0.0.1 that forwards each accepted TCP connection over its own QUIC stream. */
+  readonly port: number;
+  stats(): IrohTcpForwarderStats;
+  stop(): Promise<void>;
+  isStopped(): boolean;
+};
+
 export type IrohBridge = {
   bridgeVersion(): string | Promise<string>;
   nodeId(): string | Promise<string>;
@@ -81,6 +107,11 @@ export type IrohBridge = {
   openSession(options: IrohConnectOptions): Promise<IrohBridgeSession>;
   /** Logical session helper using the typed dial-target contract. */
   openTargetSession(options: IrohConnectTargetOptions): Promise<IrohBridgeSession>;
+  /**
+   * Listens on 127.0.0.1 and forwards every accepted TCP connection over its own
+   * bidirectional QUIC stream on the shared peer session. Bytes never cross the JS bridge.
+   */
+  startTcpForwarder(options: IrohTcpForwarderOptions): Promise<IrohTcpForwarder>;
 };
 
 export declare const MODULE_NAME = "IrohBridge";

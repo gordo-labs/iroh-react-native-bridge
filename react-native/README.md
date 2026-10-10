@@ -213,6 +213,31 @@ Same dial options as `connect()`, but returns a **logical session** helper:
 Use this when one feature owns several streams (e.g. control + media) and should
 tear them down together.
 
+#### `startTcpForwarder(options): Promise<IrohTcpForwarder>`
+
+Listens on `127.0.0.1` and forwards **every accepted TCP connection over its own
+bidirectional QUIC stream** on the shared peer session (the pattern of n0's
+`dumbpipe`). Use it to expose a remote HTTP (or any TCP) service to local native
+clients — media players, `fetch`, image loaders — without moving bytes through
+JavaScript. Independent streams mean a large download on one connection never
+delays a small request on another.
+
+Options: the same dial options as `connect()` or `connectTarget()`, plus:
+
+- `listenPort?: number` — loopback port; `0` (default) picks a free one
+- `preamble?: Uint8Array` — bytes written at the start of every forwarded stream
+  (up to 4 KiB), so the remote side can recognise forwarded streams
+
+Returns `{ id, port, stats(), stop(), isStopped() }`. `stats()` reports
+`activeConnections`, `totalConnections`, `failedStreams`, `bytesUp`, `bytesDown`
+and `activeDownMs` (time while data was arriving, so `bytesDown * 8 / activeDownMs`
+is the measured throughput in kbit/s). `stop()` closes the listener and every
+forwarded connection; `bridge.stop()` stops all forwarders.
+
+The listener is reachable by other apps on the same device. Authenticate requests
+at the remote service (for example with a per-session secret in the path), not by
+the fact that they arrive through the forwarder.
+
 ---
 
 ### Stream methods (`IrohBridgeConnection`)

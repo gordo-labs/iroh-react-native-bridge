@@ -31,6 +31,7 @@ yet a stable general-purpose React Native Iroh SDK.
 | Send/receive framed binary messages | Implemented |
 | Multiple independent streams on one QUIC session | Implemented (`0.2.0`) |
 | Bounded queues and receive backpressure | Implemented (`0.2.0`) |
+| Loopback TCP forwarder (one QUIC stream per TCP connection) | Implemented (unreleased `0.3.0`) |
 | Stream close/error JS notifications | Implemented (`0.2.0`) |
 | Android JNI context initialization | Implemented |
 | iOS xcframework packaging | Implemented |

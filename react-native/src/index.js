@@ -201,6 +201,52 @@ function normalizeConnectTargetOptions(options) {
   );
 }
 
+function normalizeTcpForwarderOptions(options) {
+  if (typeof options !== 'object' || options == null || Array.isArray(options)) {
+    throw new TypeError(
+      'Iroh startTcpForwarder expects { nodeId, alpn, addressHint? } or { target, alpn }',
+    );
+  }
+  const dial = options.target != null
+    ? normalizeConnectTargetOptions(options)
+    : { targetKind: undefined, endpointTicket: undefined, directAddresses: undefined,
+        relayUrl: undefined, ...normalizeConnectOptions(options) };
+  const listenPort = options.listenPort ?? 0;
+  if (!Number.isInteger(listenPort) || listenPort < 0 || listenPort > 65535) {
+    throw new TypeError('Iroh startTcpForwarder listenPort must be an integer from 0 to 65535');
+  }
+  let preamble;
+  if (options.preamble != null) {
+    if (!(options.preamble instanceof Uint8Array) && !Array.isArray(options.preamble)) {
+      throw new TypeError('Iroh startTcpForwarder preamble must be a Uint8Array');
+    }
+    preamble = toArrayBuffer(options.preamble);
+  }
+  return {
+    nodeId: dial.nodeId,
+    alpn: dial.alpn,
+    addressHint: dial.addressHint,
+    targetKind: dial.targetKind,
+    endpointTicket: dial.endpointTicket,
+    directAddresses: dial.directAddresses,
+    relayUrl: dial.relayUrl,
+    listenPort,
+    preamble,
+    timeoutMs: dial.timeoutMs,
+  };
+}
+
+function toNumberStats(stats) {
+  return {
+    activeConnections: Number(stats.activeConnections),
+    totalConnections: Number(stats.totalConnections),
+    failedStreams: Number(stats.failedStreams),
+    bytesUp: Number(stats.bytesUp),
+    bytesDown: Number(stats.bytesDown),
+    activeDownMs: Number(stats.activeDownMs),
+  };
+}
+
 function resolveGeneratedRuntime() {
   if (generatedRuntime) return generatedRuntime;
   if (generatedRuntimeError) return null;
@@ -451,6 +497,35 @@ function getGeneratedIrohBridge() {
       const connectOptions = normalizeConnectTargetOptions(options);
       return openLogicalSession(() => connectNormalizedTargetStream(connectOptions));
     },
+    async startTcpForwarder(options) {
+      if (typeof runtime.startTcpForwarder !== 'function') {
+        throw new IrohBridgeError(
+          'Installed Iroh native runtime does not support TCP forwarding',
+          'UNSUPPORTED_NATIVE_API',
+        );
+      }
+      const forwarderOptions = normalizeTcpForwarderOptions(options);
+      const info = callRuntime(() => runtime.startTcpForwarder(forwarderOptions));
+      const id = info.id;
+      let stopped = false;
+      return {
+        id,
+        port: Number(info.port),
+        stats() {
+          return toNumberStats(callRuntime(() => runtime.tcpForwarderStats(id)));
+        },
+        stop() {
+          if (!stopped) {
+            stopped = true;
+            callRuntime(() => runtime.stopTcpForwarder(id));
+          }
+          return Promise.resolve();
+        },
+        isStopped() {
+          return stopped;
+        },
+      };
+    },
   };
 }
 
@@ -482,6 +557,9 @@ function getUnavailableIrohBridge(error) {
       throw unavailable;
     },
     async openTargetSession() {
+      throw unavailable;
+    },
+    async startTcpForwarder() {
       throw unavailable;
     },
   };
