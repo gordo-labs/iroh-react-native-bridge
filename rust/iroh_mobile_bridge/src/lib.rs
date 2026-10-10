@@ -1357,6 +1357,87 @@ mod tests {
         runtime.block_on(server.close());
         stop();
     }
+
+    /// Manual end-to-end check against an external peer (not run in CI):
+    /// E2E_NODE_ID, E2E_HINT (JSON address hint), E2E_ALPN, E2E_PREFIX, E2E_PREAMBLE_HEX
+    /// cargo test --lib e2e_forward_against_external_peer -- --ignored --nocapture
+    #[test]
+    #[ignore]
+    fn e2e_forward_against_external_peer() {
+        use std::io::{Read, Write};
+        let _guard = test_guard();
+        let var = |name: &str| std::env::var(name).unwrap_or_else(|_| panic!("{name} is required"));
+        let (node_id, hint, alpn, prefix) = (
+            var("E2E_NODE_ID"),
+            var("E2E_HINT"),
+            var("E2E_ALPN"),
+            var("E2E_PREFIX"),
+        );
+        let preamble = std::env::var("E2E_PREAMBLE_HEX")
+            .ok()
+            .map(|value| hex::decode(value).expect("preamble hex"));
+        stop();
+        start(Some(vec![alpn.clone()])).expect("start");
+        let control = connect(
+            node_id.clone(),
+            alpn.clone(),
+            Some(hint.clone()),
+            Some(10_000),
+        )
+        .expect("control stream");
+        send(control.clone(), br#"{"kind":"session.verify"}"#.to_vec()).expect("send control");
+        let reply = next_message(control, 5_000)
+            .expect("reply")
+            .expect("reply frame");
+        println!("control reply: {}", String::from_utf8_lossy(&reply));
+
+        let forwarder = start_tcp_forwarder(TcpForwarderOptions {
+            node_id: Some(node_id),
+            alpn,
+            address_hint: Some(hint),
+            target_kind: None,
+            endpoint_ticket: None,
+            direct_addresses: None,
+            relay_url: None,
+            listen_port: 0,
+            preamble,
+            timeout_ms: Some(10_000),
+        })
+        .expect("forwarder");
+        let port = forwarder.port;
+        let fetch = |path: String| {
+            std::thread::spawn(move || {
+                let started = std::time::Instant::now();
+                let mut tcp = std::net::TcpStream::connect(("127.0.0.1", port)).expect("tcp");
+                tcp.write_all(
+                    format!("GET {path} HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r\n")
+                        .as_bytes(),
+                )
+                .expect("write");
+                let mut response = Vec::new();
+                tcp.read_to_end(&mut response).expect("read");
+                let head =
+                    String::from_utf8_lossy(&response[..response.len().min(160)]).to_string();
+                (path, response.len(), head, started.elapsed())
+            })
+        };
+        let big = fetch(format!("{prefix}/big"));
+        let small = fetch(format!("{prefix}/api/ping"));
+        let wrong = fetch("/_tape/wrong/api/ping".to_string());
+        for handle in [small, big, wrong] {
+            let (path, len, head, elapsed) = handle.join().unwrap();
+            println!(
+                "{path}: {len} bytes in {elapsed:?} | {}",
+                head.lines().next().unwrap_or("")
+            );
+        }
+        println!(
+            "stats: {:?}",
+            tcp_forwarder_stats(forwarder.id.clone()).unwrap()
+        );
+        stop_tcp_forwarder(forwarder.id);
+        stop();
+    }
 }
 
 uniffi::setup_scaffolding!();
