@@ -118,12 +118,8 @@ console.log('local node', localId, 'running?', await bridge.isRunning());
 4. Calling `start()` again while already running is a **no-op** (ALPNs are not
    changed). To restart with different ALPNs: `await bridge.stop()` then
    `start(...)` again.
-5. Relays use Iroh’s **default relay set** (`RelayMode::Default`) unless you
-   pass `relayUrls`: `start({ relayUrls: ['https://relay.example.org'] })` uses
-   only those relays (up to 8, e.g. self-hosted `iroh-relay`), and
-   `start({ relayUrls: [] })` disables relays (direct addresses only). Requires
-   native artifacts that export `startWithOptions`; older ones reject with
-   `UNSUPPORTED_NATIVE_API`.
+5. Relays use Iroh’s **default relay set** (`RelayMode::Default`) so off-LAN
+   dials can work when the hint includes a relay URL.
 6. On teardown / logout: close streams/sessions, then `await bridge.stop()`.
 
 ### Native module name

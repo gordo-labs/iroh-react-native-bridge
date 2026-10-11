@@ -13,7 +13,7 @@ use std::{
 
 use iroh::{
     endpoint::{Connection, Endpoint},
-    EndpointAddr, EndpointId, RelayMap, RelayMode, RelayUrl, TransportAddr,
+    EndpointAddr, EndpointId, RelayMode, RelayUrl, TransportAddr,
 };
 use iroh_tickets::endpoint::EndpointTicket;
 use serde::Deserialize;
@@ -32,7 +32,6 @@ const MAX_SEND_QUEUE_BYTES: usize = 16 * 1024 * 1024;
 const MAX_INBOX_FRAMES: usize = 256;
 const MAX_INBOX_BYTES: usize = 16 * 1024 * 1024;
 const MAX_CACHED_SESSIONS: usize = 32;
-const MAX_RELAY_URLS: usize = 8;
 
 mod tcp_forward;
 pub use tcp_forward::{
@@ -538,60 +537,9 @@ fn node_id() -> String {
     with_state(|state| Ok(state.node_id.clone().unwrap_or_default())).unwrap_or_default()
 }
 
-/// Options for [`start_with_options`].
-#[derive(uniffi::Record)]
-pub struct EndpointStartOptions {
-    /// ALPNs accepted by this endpoint. `None` uses the default ALPN.
-    pub alpns: Option<Vec<String>>,
-    /// Relay servers. `None` uses the Iroh default relays, an empty list disables
-    /// relays (direct addresses only), and a non-empty list uses only those relays.
-    pub relay_urls: Option<Vec<String>>,
-}
-
 /// Start the Iroh endpoint.
 #[uniffi::export]
 fn start(alpns: Option<Vec<String>>) -> Result<(), IrohBridgeError> {
-    start_endpoint(alpns, RelayMode::Default)
-}
-
-/// Start the Iroh endpoint with explicit options (custom or disabled relays).
-#[uniffi::export]
-fn start_with_options(options: EndpointStartOptions) -> Result<(), IrohBridgeError> {
-    let relay_mode = relay_mode_from_urls(options.relay_urls)?;
-    start_endpoint(options.alpns, relay_mode)
-}
-
-fn relay_mode_from_urls(relay_urls: Option<Vec<String>>) -> Result<RelayMode, IrohBridgeError> {
-    let Some(values) = relay_urls else {
-        return Ok(RelayMode::Default);
-    };
-    let mut urls: Vec<RelayUrl> = Vec::new();
-    for value in values {
-        let trimmed = value.trim();
-        if trimmed.is_empty() {
-            return Err(err("relay URL must not be empty"));
-        }
-        let url = RelayUrl::from_str(trimmed).map_err(|_| err("invalid relay URL"))?;
-        if !matches!(url.scheme(), "https" | "http") {
-            return Err(err("relay URL must use https or http"));
-        }
-        if !urls.contains(&url) {
-            urls.push(url);
-        }
-    }
-    if urls.len() > MAX_RELAY_URLS {
-        return Err(err("too many relay URLs"));
-    }
-    if urls.is_empty() {
-        return Ok(RelayMode::Disabled);
-    }
-    Ok(RelayMode::Custom(RelayMap::from_iter(urls)))
-}
-
-fn start_endpoint(
-    alpns: Option<Vec<String>>,
-    relay_mode: RelayMode,
-) -> Result<(), IrohBridgeError> {
     with_state(|state| {
         if state.endpoint.is_some() {
             return Ok(());
@@ -603,10 +551,10 @@ fn start_endpoint(
             // transport entirely: relay candidates in the peer's EndpointAddr are
             // undialable and NAT hole punching (coordinated over relays) never
             // happens, so connects only succeed when a direct addr is reachable
-            // (same LAN). The caller picks the default relays, its own relays, or
-            // explicitly disables them.
+            // (same LAN). Enable the default relay servers so cross-network dials
+            // can fall back to the remote peer's relay.
             Endpoint::builder(iroh::endpoint::presets::Minimal)
-                .relay_mode(relay_mode)
+                .relay_mode(RelayMode::Default)
                 .alpns(endpoint_alpns.clone())
                 .bind()
                 .await
@@ -980,35 +928,6 @@ mod tests {
     #[test]
     fn test_bridge_version() {
         assert_eq!(bridge_version(), "0.3.0");
-    }
-
-    #[test]
-    fn test_relay_mode_from_urls() {
-        assert!(matches!(
-            relay_mode_from_urls(None).unwrap(),
-            RelayMode::Default
-        ));
-        assert!(matches!(
-            relay_mode_from_urls(Some(Vec::new())).unwrap(),
-            RelayMode::Disabled
-        ));
-        match relay_mode_from_urls(Some(vec![
-            "https://relay.example.org".to_string(),
-            " https://relay.example.org ".to_string(),
-            "http://localhost:3340".to_string(),
-        ]))
-        .unwrap()
-        {
-            RelayMode::Custom(map) => assert_eq!(map.len(), 2),
-            _ => panic!("expected custom relay map"),
-        }
-        assert!(relay_mode_from_urls(Some(vec!["".to_string()])).is_err());
-        assert!(relay_mode_from_urls(Some(vec!["not a url".to_string()])).is_err());
-        assert!(relay_mode_from_urls(Some(vec!["ftp://relay.example.org".to_string()])).is_err());
-        let many = (0..=MAX_RELAY_URLS)
-            .map(|i| format!("https://relay{i}.example.org"))
-            .collect();
-        assert!(relay_mode_from_urls(Some(many)).is_err());
     }
 
     #[test]

@@ -64,9 +64,6 @@ protected:
   jsi::Value cpp_uniffi_iroh_mobile_bridge_fn_func_start(
       jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
       size_t count);
-  jsi::Value cpp_uniffi_iroh_mobile_bridge_fn_func_start_with_options(
-      jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
-      size_t count);
   jsi::Value cpp_uniffi_iroh_mobile_bridge_fn_func_stop(
       jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
       size_t count);
@@ -110,9 +107,6 @@ protected:
       jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
       size_t count);
   jsi::Value cpp_uniffi_iroh_mobile_bridge_checksum_func_start(
-      jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
-      size_t count);
-  jsi::Value cpp_uniffi_iroh_mobile_bridge_checksum_func_start_with_options(
       jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
       size_t count);
   jsi::Value cpp_uniffi_iroh_mobile_bridge_checksum_func_stop(

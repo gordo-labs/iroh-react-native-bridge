@@ -79,7 +79,6 @@ interface NativeModuleInterface {
     ubrn_uniffi_iroh_mobile_bridge_fn_func_send(connectionId: Uint8Array, data: Uint8Array, uniffi_out_err: UniffiRustCallStatus): void;
     ubrn_uniffi_iroh_mobile_bridge_fn_func_start(alpns: Uint8Array, uniffi_out_err: UniffiRustCallStatus): void;
     ubrn_uniffi_iroh_mobile_bridge_fn_func_start_tcp_forwarder(options: Uint8Array, uniffi_out_err: UniffiRustCallStatus): Uint8Array;
-    ubrn_uniffi_iroh_mobile_bridge_fn_func_start_with_options(options: Uint8Array, uniffi_out_err: UniffiRustCallStatus): void;
     ubrn_uniffi_iroh_mobile_bridge_fn_func_stop(uniffi_out_err: UniffiRustCallStatus): void;
     ubrn_uniffi_iroh_mobile_bridge_fn_func_stop_tcp_forwarder(id: Uint8Array, uniffi_out_err: UniffiRustCallStatus): void;
     ubrn_uniffi_iroh_mobile_bridge_fn_func_tcp_forwarder_stats(id: Uint8Array, uniffi_out_err: UniffiRustCallStatus): Uint8Array;
@@ -96,7 +95,6 @@ interface NativeModuleInterface {
     ubrn_uniffi_iroh_mobile_bridge_checksum_func_send(): number;
     ubrn_uniffi_iroh_mobile_bridge_checksum_func_start(): number;
     ubrn_uniffi_iroh_mobile_bridge_checksum_func_start_tcp_forwarder(): number;
-    ubrn_uniffi_iroh_mobile_bridge_checksum_func_start_with_options(): number;
     ubrn_uniffi_iroh_mobile_bridge_checksum_func_stop(): number;
     ubrn_uniffi_iroh_mobile_bridge_checksum_func_stop_tcp_forwarder(): number;
     ubrn_uniffi_iroh_mobile_bridge_checksum_func_tcp_forwarder_stats(): number;

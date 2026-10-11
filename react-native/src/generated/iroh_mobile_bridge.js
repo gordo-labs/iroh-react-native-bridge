@@ -19,7 +19,6 @@ var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: tru
 // src/generated/iroh_mobile_bridge.ts
 var iroh_mobile_bridge_exports = {};
 __export(iroh_mobile_bridge_exports, {
-  EndpointStartOptions: () => EndpointStartOptions,
   IrohBridgeError: () => IrohBridgeError,
   IrohBridgeError_Tags: () => IrohBridgeError_Tags,
   TcpForwarderInfo: () => TcpForwarderInfo,
@@ -38,7 +37,6 @@ __export(iroh_mobile_bridge_exports, {
   send: () => send,
   start: () => start,
   startTcpForwarder: () => startTcpForwarder,
-  startWithOptions: () => startWithOptions,
   stop: () => stop,
   stopTcpForwarder: () => stopTcpForwarder,
   tcpForwarderStats: () => tcpForwarderStats
@@ -277,21 +275,6 @@ function startTcpForwarder(options) {
     FfiConverterString.lift.bind(FfiConverterString)
   ));
 }
-function startWithOptions(options) {
-  uniffiCaller.rustCallWithError(
-    /*liftError:*/
-    FfiConverterTypeIrohBridgeError.lift.bind(FfiConverterTypeIrohBridgeError),
-    /*caller:*/
-    (callStatus) => {
-      iroh_mobile_bridge_ffi_default().ubrn_uniffi_iroh_mobile_bridge_fn_func_start_with_options(
-        FfiConverterTypeEndpointStartOptions.lower(options, iroh_mobile_bridge_ffi_default().rustbuffer_alloc),
-        callStatus
-      );
-    },
-    /*liftString:*/
-    FfiConverterString.lift.bind(FfiConverterString)
-  );
-}
 function stop() {
   uniffiCaller.rustCall(
     /*caller:*/
@@ -371,36 +354,6 @@ var stringConverter = (() => {
   };
 })();
 var FfiConverterString = (0, import_core.uniffiCreateFfiConverterString)(stringConverter);
-var EndpointStartOptions = (() => {
-  const defaults = () => ({});
-  const create = (() => {
-    return (0, import_core.uniffiCreateRecord)(defaults);
-  })();
-  return Object.freeze({
-    create,
-    new: create,
-    defaults: () => Object.freeze(defaults())
-  });
-})();
-var FfiConverterTypeEndpointStartOptions = (() => {
-  class FFIConverter extends import_core.AbstractFfiConverterByteArray {
-    read(from) {
-      return {
-        alpns: FfiConverterOptionalSequenceString.read(from),
-        relayUrls: FfiConverterOptionalSequenceString.read(from)
-      };
-    }
-    write(value, into) {
-      FfiConverterOptionalSequenceString.write(value.alpns, into);
-      FfiConverterOptionalSequenceString.write(value.relayUrls, into);
-    }
-    allocationSize(value) {
-      return FfiConverterOptionalSequenceString.allocationSize(value.alpns) + FfiConverterOptionalSequenceString.allocationSize(value.relayUrls);
-    }
-  }
-  ;
-  return new FFIConverter();
-})();
 var TcpForwarderInfo = (() => {
   const defaults = () => ({});
   const create = (() => {
@@ -900,9 +853,9 @@ var FfiConverterTypeIrohBridgeError = (() => {
   }
   return new FFIConverter();
 })();
+var FfiConverterOptionalString = new import_core.FfiConverterOptional(FfiConverterString);
 var FfiConverterSequenceString = new import_core.FfiConverterArray(FfiConverterString);
 var FfiConverterOptionalSequenceString = new import_core.FfiConverterOptional(FfiConverterSequenceString);
-var FfiConverterOptionalString = new import_core.FfiConverterOptional(FfiConverterString);
 var FfiConverterOptionalBytes = new import_core.FfiConverterOptional(import_core.FfiConverterArrayBuffer);
 var FfiConverterOptionalUInt32 = new import_core.FfiConverterOptional(import_core.FfiConverterUInt32);
 function uniffiEnsureInitialized() {
@@ -947,9 +900,6 @@ function uniffiEnsureInitialized() {
   if (iroh_mobile_bridge_ffi_default().ubrn_uniffi_iroh_mobile_bridge_checksum_func_start_tcp_forwarder() !== 37349) {
     throw new import_core.UniffiInternalError.ApiChecksumMismatch("uniffi_iroh_mobile_bridge_checksum_func_start_tcp_forwarder");
   }
-  if (iroh_mobile_bridge_ffi_default().ubrn_uniffi_iroh_mobile_bridge_checksum_func_start_with_options() !== 38266) {
-    throw new import_core.UniffiInternalError.ApiChecksumMismatch("uniffi_iroh_mobile_bridge_checksum_func_start_with_options");
-  }
   if (iroh_mobile_bridge_ffi_default().ubrn_uniffi_iroh_mobile_bridge_checksum_func_stop() !== 53683) {
     throw new import_core.UniffiInternalError.ApiChecksumMismatch("uniffi_iroh_mobile_bridge_checksum_func_stop");
   }
@@ -963,7 +913,6 @@ function uniffiEnsureInitialized() {
 var iroh_mobile_bridge_default = Object.freeze({
   initialize: uniffiEnsureInitialized,
   converters: {
-    FfiConverterTypeEndpointStartOptions,
     FfiConverterTypeIrohBridgeError,
     FfiConverterTypeTcpForwarderInfo,
     FfiConverterTypeTcpForwarderOptions,
@@ -972,7 +921,6 @@ var iroh_mobile_bridge_default = Object.freeze({
 });
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
-  EndpointStartOptions,
   IrohBridgeError,
   IrohBridgeError_Tags,
   TcpForwarderInfo,
@@ -990,7 +938,6 @@ var iroh_mobile_bridge_default = Object.freeze({
   send,
   start,
   startTcpForwarder,
-  startWithOptions,
   stop,
   stopTcpForwarder,
   tcpForwarderStats

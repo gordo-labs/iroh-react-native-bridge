@@ -15,12 +15,6 @@ export type IrohBridgeSession = {
 
 export type IrohStartOptions = {
   alpns?: string[];
-  /**
-   * Relay servers for this endpoint. Omit for the Iroh default relays, pass `[]`
-   * to disable relays (direct addresses only), or pass up to 8 relay URLs to use
-   * only those relays.
-   */
-  relayUrls?: string[];
 };
 
 export type IrohConnectOptions = {
