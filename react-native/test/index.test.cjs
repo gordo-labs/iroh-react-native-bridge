@@ -13,6 +13,7 @@ function loadBridgeRuntime() {
   const connectCalls = [];
   const connectTargetCalls = [];
   const forwarderCalls = [];
+  const startCalls = [];
   const stoppedForwarders = [];
   const inboxes = new Map();
   const openStream = () => {
@@ -23,7 +24,8 @@ function loadBridgeRuntime() {
   const runtime = {
     bridgeVersion: () => '0.2.0',
     nodeId: () => 'test-node',
-    start: () => {},
+    start: (...args) => startCalls.push(['start', ...args]),
+    startWithOptions: (options) => startCalls.push(['startWithOptions', options]),
     stop: () => {},
     isRunning: () => true,
     connect: (...args) => {
@@ -78,6 +80,7 @@ function loadBridgeRuntime() {
     connectTargetCalls,
     forwarderCalls,
     stoppedForwarders,
+    startCalls,
   };
 }
 
@@ -289,4 +292,35 @@ test('TCP forwarder rejects invalid ports before crossing the native boundary', 
     /listenPort/,
   );
   assert.equal(forwarderCalls.length, 0);
+});
+
+test('start keeps the default relay call when relayUrls is omitted', async () => {
+  const { bridge, startCalls } = loadBridgeRuntime();
+  await bridge.start({ alpns: ['example/1'] });
+  assert.deepEqual(startCalls, [['start', ['example/1']]]);
+});
+
+test('start passes custom or disabled relays to startWithOptions', async () => {
+  const { bridge, startCalls } = loadBridgeRuntime();
+  await bridge.start({ relayUrls: [' https://relay.example.org '] });
+  await bridge.start({ alpns: ['example/1'], relayUrls: [] });
+  assert.deepEqual(startCalls, [
+    ['startWithOptions', { alpns: undefined, relayUrls: ['https://relay.example.org'] }],
+    ['startWithOptions', { alpns: ['example/1'], relayUrls: [] }],
+  ]);
+});
+
+test('start rejects invalid relayUrls before reaching native code', async () => {
+  const { bridge, startCalls } = loadBridgeRuntime();
+  assert.throws(() => bridge.start({ relayUrls: 'https://relay.example.org' }), TypeError);
+  assert.throws(() => bridge.start({ relayUrls: ['iroh+relay://abc'] }), TypeError);
+  const many = Array.from({ length: 9 }, (_, i) => `https://relay${i}.example.org`);
+  assert.throws(() => bridge.start({ relayUrls: many }), TypeError);
+  assert.deepEqual(startCalls, []);
+});
+
+test('start with relayUrls reports old native runtimes clearly', async () => {
+  const { bridge, runtime } = loadBridgeRuntime();
+  delete runtime.startWithOptions;
+  await assert.rejects(bridge.start({ relayUrls: [] }), { code: 'UNSUPPORTED_NATIVE_API' });
 });

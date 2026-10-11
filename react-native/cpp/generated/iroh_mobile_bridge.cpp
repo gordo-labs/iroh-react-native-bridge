@@ -123,6 +123,8 @@ void uniffi_iroh_mobile_bridge_fn_func_send(RustBuffer connection_id,
                                             RustCallStatus *uniffi_out_err);
 void uniffi_iroh_mobile_bridge_fn_func_start(RustBuffer alpns,
                                              RustCallStatus *uniffi_out_err);
+void uniffi_iroh_mobile_bridge_fn_func_start_with_options(
+    RustBuffer options, RustCallStatus *uniffi_out_err);
 void uniffi_iroh_mobile_bridge_fn_func_stop(RustCallStatus *uniffi_out_err);
 RustBuffer uniffi_iroh_mobile_bridge_fn_func_start_tcp_forwarder(
     RustBuffer options, RustCallStatus *uniffi_out_err);
@@ -260,6 +262,7 @@ uint16_t uniffi_iroh_mobile_bridge_checksum_func_next_message();
 uint16_t uniffi_iroh_mobile_bridge_checksum_func_node_id();
 uint16_t uniffi_iroh_mobile_bridge_checksum_func_send();
 uint16_t uniffi_iroh_mobile_bridge_checksum_func_start();
+uint16_t uniffi_iroh_mobile_bridge_checksum_func_start_with_options();
 uint16_t uniffi_iroh_mobile_bridge_checksum_func_stop();
 uint16_t uniffi_iroh_mobile_bridge_checksum_func_start_tcp_forwarder();
 uint16_t uniffi_iroh_mobile_bridge_checksum_func_stop_tcp_forwarder();
@@ -1748,6 +1751,18 @@ NativeIrohMobileBridge::NativeIrohMobileBridge(
             return this->cpp_uniffi_iroh_mobile_bridge_fn_func_start(
                 rt, thisVal, args, count);
           });
+  props["ubrn_uniffi_iroh_mobile_bridge_fn_func_start_with_options"] =
+      jsi::Function::createFromHostFunction(
+          rt,
+          jsi::PropNameID::forAscii(
+              rt, "ubrn_uniffi_iroh_mobile_bridge_fn_func_start_with_options"),
+          1,
+          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
+                 const jsi::Value *args, size_t count) -> jsi::Value {
+            return this
+                ->cpp_uniffi_iroh_mobile_bridge_fn_func_start_with_options(
+                    rt, thisVal, args, count);
+          });
   props["ubrn_uniffi_iroh_mobile_bridge_fn_func_stop"] =
       jsi::Function::createFromHostFunction(
           rt,
@@ -1924,6 +1939,18 @@ NativeIrohMobileBridge::NativeIrohMobileBridge(
                  const jsi::Value *args, size_t count) -> jsi::Value {
             return this->cpp_uniffi_iroh_mobile_bridge_checksum_func_start(
                 rt, thisVal, args, count);
+          });
+  props["ubrn_uniffi_iroh_mobile_bridge_checksum_func_start_with_options"] =
+      jsi::Function::createFromHostFunction(
+          rt,
+          jsi::PropNameID::forAscii(rt, "ubrn_uniffi_iroh_mobile_bridge_"
+                                        "checksum_func_start_with_options"),
+          0,
+          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
+                 const jsi::Value *args, size_t count) -> jsi::Value {
+            return this
+                ->cpp_uniffi_iroh_mobile_bridge_checksum_func_start_with_options(
+                    rt, thisVal, args, count);
           });
   props["ubrn_uniffi_iroh_mobile_bridge_checksum_func_stop"] =
       jsi::Function::createFromHostFunction(
@@ -2320,6 +2347,21 @@ jsi::Value NativeIrohMobileBridge::cpp_uniffi_iroh_mobile_bridge_fn_func_start(
 
   return jsi::Value::undefined();
 }
+jsi::Value NativeIrohMobileBridge::
+    cpp_uniffi_iroh_mobile_bridge_fn_func_start_with_options(
+        jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+        size_t count) {
+  RustCallStatus status =
+      uniffi::iroh_mobile_bridge::Bridging<RustCallStatus>::rustSuccess(rt);
+  uniffi_iroh_mobile_bridge_fn_func_start_with_options(
+      uniffi::iroh_mobile_bridge::Bridging<RustBuffer>::fromJs(rt, callInvoker,
+                                                               args[0]),
+      &status);
+  uniffi::iroh_mobile_bridge::Bridging<RustCallStatus>::copyIntoJs(
+      rt, callInvoker, status, args[count - 1]);
+
+  return jsi::Value::undefined();
+}
 jsi::Value NativeIrohMobileBridge::cpp_uniffi_iroh_mobile_bridge_fn_func_stop(
     jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
     size_t count) {
@@ -2463,6 +2505,14 @@ NativeIrohMobileBridge::cpp_uniffi_iroh_mobile_bridge_checksum_func_start(
     jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
     size_t count) {
   auto value = uniffi_iroh_mobile_bridge_checksum_func_start();
+
+  return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
+}
+jsi::Value NativeIrohMobileBridge::
+    cpp_uniffi_iroh_mobile_bridge_checksum_func_start_with_options(
+        jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+        size_t count) {
+  auto value = uniffi_iroh_mobile_bridge_checksum_func_start_with_options();
 
   return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
 }

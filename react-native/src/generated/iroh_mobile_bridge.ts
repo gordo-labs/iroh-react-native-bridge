@@ -242,6 +242,19 @@ export function startTcpForwarder(options: TcpForwarderOptions): TcpForwarderInf
     }
 
 /**
+ * Start the Iroh endpoint with explicit options (custom or disabled relays).
+ */
+export function startWithOptions(options: EndpointStartOptions): void /*throws*/ {uniffiCaller.rustCallWithError(
+            /*liftError:*/ FfiConverterTypeIrohBridgeError.lift.bind(FfiConverterTypeIrohBridgeError),
+            /*caller:*/ (callStatus) => { nativeModule().ubrn_uniffi_iroh_mobile_bridge_fn_func_start_with_options(
+        FfiConverterTypeEndpointStartOptions.lower(options, nativeModule().rustbuffer_alloc),
+                callStatus);
+            },
+            /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+    );
+    }
+
+/**
  * Stop the Iroh endpoint and close all active connections.
  */
 export function stop(): void {uniffiCaller.rustCall(
@@ -333,6 +346,59 @@ const stringConverter = (() => {
     };
 })();
 const FfiConverterString = uniffiCreateFfiConverterString(stringConverter);
+
+/**
+ * Options for [`start_with_options`].
+ */
+export type EndpointStartOptions = {
+    /**
+     * ALPNs accepted by this endpoint. `None` uses the default ALPN.
+     */
+    alpns?: Array<string>,
+    /**
+     * Relay servers. `None` uses the Iroh default relays, an empty list disables
+     * relays (direct addresses only), and a non-empty list uses only those relays.
+     */
+    relayUrls?: Array<string>
+}
+
+/**
+ * Generated factory for {@link EndpointStartOptions} record objects.
+ */
+export const EndpointStartOptions = (() => {
+    const defaults = () => ({
+    });
+    const create = (() => {
+        return uniffiCreateRecord<EndpointStartOptions, ReturnType<typeof defaults>>(defaults);
+    })();
+    return Object.freeze({
+        create,
+        new: create,
+        defaults: () => Object.freeze(defaults()) as Partial<EndpointStartOptions>,
+    });
+})();
+
+const FfiConverterTypeEndpointStartOptions = (() => {
+    type TypeName = EndpointStartOptions;
+    class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+        read(from: RustBuffer): TypeName {
+            return {
+                alpns: FfiConverterOptionalSequenceString.read(from),
+                relayUrls: FfiConverterOptionalSequenceString.read(from)
+            };
+        }
+        write(value: TypeName, into: RustBuffer): void {
+            FfiConverterOptionalSequenceString.write(value.alpns, into);
+            FfiConverterOptionalSequenceString.write(value.relayUrls, into);
+        }
+        allocationSize(value: TypeName): number {
+            return FfiConverterOptionalSequenceString.allocationSize(value.alpns) +
+             FfiConverterOptionalSequenceString.allocationSize(value.relayUrls);
+
+        }
+    };
+    return new FFIConverter();
+})();
 
 export type TcpForwarderInfo = {
     id: string,
@@ -1017,14 +1083,14 @@ const FfiConverterTypeIrohBridgeError = (() => {
     return new FFIConverter();
 })();
 
-// FfiConverter for string | undefined
-const FfiConverterOptionalString = new FfiConverterOptional(FfiConverterString);
-
 // FfiConverter for Array<string>
 const FfiConverterSequenceString = new FfiConverterArray(FfiConverterString);
 
 // FfiConverter for Array<string> | undefined
 const FfiConverterOptionalSequenceString = new FfiConverterOptional(FfiConverterSequenceString);
+
+// FfiConverter for string | undefined
+const FfiConverterOptionalString = new FfiConverterOptional(FfiConverterString);
 
 // FfiConverter for ArrayBuffer | undefined
 const FfiConverterOptionalBytes = new FfiConverterOptional(FfiConverterArrayBuffer);
@@ -1087,6 +1153,9 @@ function uniffiEnsureInitialized() {
     if (nativeModule().ubrn_uniffi_iroh_mobile_bridge_checksum_func_start_tcp_forwarder() !== 37349) {
         throw new UniffiInternalError.ApiChecksumMismatch("uniffi_iroh_mobile_bridge_checksum_func_start_tcp_forwarder");
     }
+    if (nativeModule().ubrn_uniffi_iroh_mobile_bridge_checksum_func_start_with_options() !== 38266) {
+        throw new UniffiInternalError.ApiChecksumMismatch("uniffi_iroh_mobile_bridge_checksum_func_start_with_options");
+    }
     if (nativeModule().ubrn_uniffi_iroh_mobile_bridge_checksum_func_stop() !== 53683) {
         throw new UniffiInternalError.ApiChecksumMismatch("uniffi_iroh_mobile_bridge_checksum_func_stop");
     }
@@ -1102,6 +1171,7 @@ function uniffiEnsureInitialized() {
 export default Object.freeze({
   initialize: uniffiEnsureInitialized,
   converters: {
+    FfiConverterTypeEndpointStartOptions,
     FfiConverterTypeIrohBridgeError,
     FfiConverterTypeTcpForwarderInfo,
     FfiConverterTypeTcpForwarderOptions,

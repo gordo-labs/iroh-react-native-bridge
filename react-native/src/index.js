@@ -74,21 +74,41 @@ function callRuntime(fn) {
   }
 }
 
+const MAX_RELAY_URLS = 8;
+
 function normalizeStartOptions(options) {
-  if (options == null) return undefined;
+  if (options == null) return { alpns: undefined, relayUrls: undefined };
   if (typeof options !== 'object' || Array.isArray(options)) {
     throw new TypeError('Iroh start options must be an object');
   }
-  if (options.alpns == null) return undefined;
-  if (!Array.isArray(options.alpns)) {
-    throw new TypeError('Iroh start options alpns must be an array');
-  }
-  return options.alpns.map((alpn) => {
-    if (typeof alpn !== 'string' || alpn.trim().length === 0) {
-      throw new TypeError('Iroh ALPN values must be non-empty strings');
+  let alpns;
+  if (options.alpns != null) {
+    if (!Array.isArray(options.alpns)) {
+      throw new TypeError('Iroh start options alpns must be an array');
     }
-    return alpn;
-  });
+    alpns = options.alpns.map((alpn) => {
+      if (typeof alpn !== 'string' || alpn.trim().length === 0) {
+        throw new TypeError('Iroh ALPN values must be non-empty strings');
+      }
+      return alpn;
+    });
+  }
+  let relayUrls;
+  if (options.relayUrls != null) {
+    if (!Array.isArray(options.relayUrls)) {
+      throw new TypeError('Iroh start options relayUrls must be an array');
+    }
+    if (options.relayUrls.length > MAX_RELAY_URLS) {
+      throw new TypeError(`Iroh start options relayUrls accepts at most ${MAX_RELAY_URLS} URLs`);
+    }
+    relayUrls = options.relayUrls.map((url) => {
+      if (typeof url !== 'string' || !/^https?:\/\/\S+$/i.test(url.trim())) {
+        throw new TypeError('Iroh relay URLs must be http(s) URLs');
+      }
+      return url.trim();
+    });
+  }
+  return { alpns, relayUrls };
 }
 
 function normalizeConnectOptions(options) {
@@ -472,8 +492,20 @@ function getGeneratedIrohBridge() {
       return callRuntime(() => runtime.nodeId());
     },
     start(options) {
-      const alpns = normalizeStartOptions(options);
-      callRuntime(() => runtime.start(alpns));
+      const { alpns, relayUrls } = normalizeStartOptions(options);
+      if (relayUrls === undefined) {
+        callRuntime(() => runtime.start(alpns));
+        return Promise.resolve();
+      }
+      if (typeof runtime.startWithOptions !== 'function') {
+        return Promise.reject(
+          new IrohBridgeError(
+            'Installed Iroh native runtime does not support custom relays',
+            'UNSUPPORTED_NATIVE_API',
+          ),
+        );
+      }
+      callRuntime(() => runtime.startWithOptions({ alpns, relayUrls }));
       return Promise.resolve();
     },
     stop() {

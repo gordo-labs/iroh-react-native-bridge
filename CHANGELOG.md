@@ -5,6 +5,9 @@ versions may still include API or packaging changes.
 
 ## Unreleased (0.3.0)
 
+- Added `relayUrls` to `start()` (native `start_with_options`): custom relay
+  servers only (up to 8, `https`/`http`) or `[]` to disable relays. Omitting it
+  keeps the default relays; the `start` ABI and checksum are unchanged.
 - Added `startTcpForwarder()`: a loopback TCP listener that forwards each accepted
   connection over its own bidirectional QUIC stream on the shared peer session,
   with an optional per-stream preamble, single-flight session dial and
