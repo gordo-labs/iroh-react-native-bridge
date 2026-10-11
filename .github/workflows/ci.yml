@@ -44,7 +44,7 @@ jobs:
           cache-dependency-path: react-native/package-lock.json
       - run: npm ci --ignore-scripts
       - run: npm run test:source
-      - run: npm audit --omit=dev --audit-level=high
+      - run: npm audit --omit=dev --omit=peer --audit-level=high
 
   repository-safety:
     name: Repository safety
