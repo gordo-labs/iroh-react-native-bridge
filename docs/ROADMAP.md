@@ -25,6 +25,11 @@
 - Track `uniffi-bindgen-react-native` generator releases and remove local
   generator patches when upstream fixes land.
 
+## 0.3.0 - Native stream forwarding ✅ (source, 2026-10-11)
+
+- `startTcpForwarder()`: loopback TCP → one QUIC stream per connection, with stats.
+- npm publish pending.
+
 ## 0.3.x - Interop Hardening
 
 - More NAT/relay reports.

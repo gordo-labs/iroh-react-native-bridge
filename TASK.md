@@ -12,8 +12,8 @@ protocols.
 
 ## Current Status
 
-Beta. Public source is on `main`.
-`@gordo-labs/react-native-iroh@0.2.0` is published on npm (2026-08-06).
+Beta. Public source is on `main` at `0.3.0` (2026-10-11).
+`@gordo-labs/react-native-iroh@0.2.0` is the latest on npm (2026-08-06); `0.3.0` publish pending.
 
 Completed:
 
@@ -31,6 +31,8 @@ Completed:
 - Build helpers that prefer rustup + auto-detect Homebrew NDK.
 - Real-device Android QA: dial + framed stream over n0 relays (2026-07-21).
 - Reused QUIC peer sessions with independent bidirectional streams (`0.2.0`).
+- Loopback TCP forwarder: one QUIC stream per TCP connection, optional preamble,
+  single-flight dial, throughput stats (`0.3.0`).
 - Bounded native queues, receive backpressure, deterministic stream close, and
   multicast JavaScript listeners.
 - Public-source CI gates and release artifact validation.
@@ -41,7 +43,8 @@ Remaining operator gates after the first public npm release (`0.2.0`, 2026-08-06
 
 - npm trusted publishing / org token for the `gordo-labs` scope (later releases).
 - Physical-device release checklist against the packed tarball.
-- Signed tag `v0.2.0` + GitHub release checksums.
+- Signed tags `v0.2.0` / `v0.3.0` + GitHub release checksums.
+- npm publish of `0.3.0` (workflow `Publish npm package` from `main`).
 
 Still required before stable 1.0:
 

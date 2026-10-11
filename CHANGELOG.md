@@ -3,7 +3,11 @@
 This project follows semantic versioning after 1.0. During 0.x, minor and patch
 versions may still include API or packaging changes.
 
-## Unreleased (0.3.0)
+## 0.3.0 (2026-10-11)
+
+Source release on `main`. npm still serves `0.2.0` until the `Publish npm package` workflow runs
+(it builds the iOS xcframework and Android `.so` files and publishes from `main`).
+
 
 - Added `startTcpForwarder()`: a loopback TCP listener that forwards each accepted
   connection over its own bidirectional QUIC stream on the shared peer session,

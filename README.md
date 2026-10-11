@@ -9,11 +9,11 @@ Public package:
 npm install @gordo-labs/react-native-iroh
 ```
 
-**Current line: `0.2.0` (beta).** Source is on public `main` after
-[PR #1](https://github.com/gordo-labs/iroh-react-native-bridge/pull/1).
-`@gordo-labs/react-native-iroh@0.2.0` is published on npm
-([package page](https://www.npmjs.com/package/@gordo-labs/react-native-iroh)).
-`npm install @gordo-labs/react-native-iroh` resolves. Contributors linking a
+**Current line: `0.3.0` (beta) on `main`** (2026-10-11): adds `startTcpForwarder()`,
+a loopback TCP listener that forwards each connection over its own QUIC stream
+(see [CHANGELOG](./CHANGELOG.md)). On npm the latest published version is still
+`0.2.0` ([package page](https://www.npmjs.com/package/@gordo-labs/react-native-iroh))
+until the `Publish npm package` workflow publishes `0.3.0`. Contributors linking a
 local checkout should follow
 [docs/BUILDING.md](./docs/BUILDING.md#local-app-integration).
 
@@ -32,7 +32,7 @@ change before a stable 1.0.
 
 | Gate | State |
 | --- | --- |
-| Package (`@gordo-labs/react-native-iroh` `0.2.0`) | Ready on `main` |
+| Package (`@gordo-labs/react-native-iroh` `0.3.0`) | On `main`; npm publish pending (latest on npm: `0.2.0`) |
 | Public GitHub repo | Done |
 | PR #1 release prep merged to `main` | Done (2026-07-23) |
 | CI on `main` | Green |
@@ -40,7 +40,7 @@ change before a stable 1.0.
 | Physical-device dial + framed stream QA (Android, n0 relays) | Verified 2026-07-21 |
 | First public npm publish | Done (2026-08-06) |
 | npm trusted publishing / org token for `gordo-labs` | **Pending** |
-| Signed GitHub release tag `v0.2.0` | **Pending** |
+| Signed GitHub release tags `v0.2.0`, `v0.3.0` | **Pending** |
 | Standalone public example app | Not yet |
 
 What works today:
