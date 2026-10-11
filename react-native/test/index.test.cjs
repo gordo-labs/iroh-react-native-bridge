@@ -305,8 +305,8 @@ test('start passes custom or disabled relays to startWithOptions', async () => {
   await bridge.start({ relayUrls: [' https://relay.example.org '] });
   await bridge.start({ alpns: ['example/1'], relayUrls: [] });
   assert.deepEqual(startCalls, [
-    ['startWithOptions', { alpns: undefined, relayUrls: ['https://relay.example.org'] }],
-    ['startWithOptions', { alpns: ['example/1'], relayUrls: [] }],
+    ['startWithOptions', { alpns: undefined, relayUrls: ['https://relay.example.org'], secretKey: undefined }],
+    ['startWithOptions', { alpns: ['example/1'], relayUrls: [], secretKey: undefined }],
   ]);
 });
 
@@ -323,4 +323,11 @@ test('start with relayUrls reports old native runtimes clearly', async () => {
   const { bridge, runtime } = loadBridgeRuntime();
   delete runtime.startWithOptions;
   await assert.rejects(bridge.start({ relayUrls: [] }), { code: 'UNSUPPORTED_NATIVE_API' });
+});
+
+test('start passes a persistent secretKey and validates it', async () => {
+  const { bridge, startCalls } = loadBridgeRuntime();
+  await bridge.start({ secretKey: 'AB'.repeat(32) });
+  assert.deepEqual(startCalls, [['startWithOptions', { alpns: undefined, relayUrls: undefined, secretKey: 'ab'.repeat(32) }]]);
+  assert.throws(() => bridge.start({ secretKey: 'abc' }), TypeError);
 });

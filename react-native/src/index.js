@@ -77,7 +77,7 @@ function callRuntime(fn) {
 const MAX_RELAY_URLS = 8;
 
 function normalizeStartOptions(options) {
-  if (options == null) return { alpns: undefined, relayUrls: undefined };
+  if (options == null) return { alpns: undefined, relayUrls: undefined, secretKey: undefined };
   if (typeof options !== 'object' || Array.isArray(options)) {
     throw new TypeError('Iroh start options must be an object');
   }
@@ -108,7 +108,14 @@ function normalizeStartOptions(options) {
       return url.trim();
     });
   }
-  return { alpns, relayUrls };
+  let secretKey;
+  if (options.secretKey != null) {
+    if (typeof options.secretKey !== 'string' || !/^[0-9a-fA-F]{64}$/.test(options.secretKey)) {
+      throw new TypeError('Iroh start options secretKey must be 64 hex characters');
+    }
+    secretKey = options.secretKey.toLowerCase();
+  }
+  return { alpns, relayUrls, secretKey };
 }
 
 function normalizeConnectOptions(options) {
@@ -491,21 +498,25 @@ function getGeneratedIrohBridge() {
     nodeId() {
       return callRuntime(() => runtime.nodeId());
     },
+    nodeIdHex() {
+      if (typeof runtime.nodeIdHex !== 'function') return '';
+      return callRuntime(() => runtime.nodeIdHex());
+    },
     start(options) {
-      const { alpns, relayUrls } = normalizeStartOptions(options);
-      if (relayUrls === undefined) {
+      const { alpns, relayUrls, secretKey } = normalizeStartOptions(options);
+      if (relayUrls === undefined && secretKey === undefined) {
         callRuntime(() => runtime.start(alpns));
         return Promise.resolve();
       }
       if (typeof runtime.startWithOptions !== 'function') {
         return Promise.reject(
           new IrohBridgeError(
-            'Installed Iroh native runtime does not support custom relays',
+            'Installed Iroh native runtime does not support start options (relayUrls/secretKey)',
             'UNSUPPORTED_NATIVE_API',
           ),
         );
       }
-      callRuntime(() => runtime.startWithOptions({ alpns, relayUrls }));
+      callRuntime(() => runtime.startWithOptions({ alpns, relayUrls, secretKey }));
       return Promise.resolve();
     },
     stop() {
@@ -568,6 +579,9 @@ function getUnavailableIrohBridge(error) {
       return `unavailable: ${unavailable.message}`;
     },
     nodeId() {
+      return '';
+    },
+    nodeIdHex() {
       return '';
     },
     start() {

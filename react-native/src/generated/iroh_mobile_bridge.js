@@ -35,6 +35,7 @@ __export(iroh_mobile_bridge_exports, {
   isStreamOpen: () => isStreamOpen,
   nextMessage: () => nextMessage,
   nodeId: () => nodeId,
+  nodeIdHex: () => nodeIdHex,
   send: () => send,
   start: () => start,
   startTcpForwarder: () => startTcpForwarder,
@@ -225,6 +226,24 @@ function nodeId() {
     FfiConverterString.lift.bind(FfiConverterString)
   ));
 }
+function nodeIdHex() {
+  return ((__rb) => {
+    try {
+      return FfiConverterString.lift(__rb);
+    } finally {
+      iroh_mobile_bridge_ffi_default().rustbuffer_free(__rb);
+    }
+  })(uniffiCaller.rustCall(
+    /*caller:*/
+    (callStatus) => {
+      return iroh_mobile_bridge_ffi_default().ubrn_uniffi_iroh_mobile_bridge_fn_func_node_id_hex(
+        callStatus
+      );
+    },
+    /*liftString:*/
+    FfiConverterString.lift.bind(FfiConverterString)
+  ));
+}
 function send(connectionId, data) {
   uniffiCaller.rustCallWithError(
     /*liftError:*/
@@ -387,15 +406,17 @@ var FfiConverterTypeEndpointStartOptions = (() => {
     read(from) {
       return {
         alpns: FfiConverterOptionalSequenceString.read(from),
-        relayUrls: FfiConverterOptionalSequenceString.read(from)
+        relayUrls: FfiConverterOptionalSequenceString.read(from),
+        secretKey: FfiConverterOptionalString.read(from)
       };
     }
     write(value, into) {
       FfiConverterOptionalSequenceString.write(value.alpns, into);
       FfiConverterOptionalSequenceString.write(value.relayUrls, into);
+      FfiConverterOptionalString.write(value.secretKey, into);
     }
     allocationSize(value) {
-      return FfiConverterOptionalSequenceString.allocationSize(value.alpns) + FfiConverterOptionalSequenceString.allocationSize(value.relayUrls);
+      return FfiConverterOptionalSequenceString.allocationSize(value.alpns) + FfiConverterOptionalSequenceString.allocationSize(value.relayUrls) + FfiConverterOptionalString.allocationSize(value.secretKey);
     }
   }
   ;
@@ -938,6 +959,9 @@ function uniffiEnsureInitialized() {
   if (iroh_mobile_bridge_ffi_default().ubrn_uniffi_iroh_mobile_bridge_checksum_func_node_id() !== 22079) {
     throw new import_core.UniffiInternalError.ApiChecksumMismatch("uniffi_iroh_mobile_bridge_checksum_func_node_id");
   }
+  if (iroh_mobile_bridge_ffi_default().ubrn_uniffi_iroh_mobile_bridge_checksum_func_node_id_hex() !== 48102) {
+    throw new import_core.UniffiInternalError.ApiChecksumMismatch("uniffi_iroh_mobile_bridge_checksum_func_node_id_hex");
+  }
   if (iroh_mobile_bridge_ffi_default().ubrn_uniffi_iroh_mobile_bridge_checksum_func_send() !== 17431) {
     throw new import_core.UniffiInternalError.ApiChecksumMismatch("uniffi_iroh_mobile_bridge_checksum_func_send");
   }
@@ -987,6 +1011,7 @@ var iroh_mobile_bridge_default = Object.freeze({
   isStreamOpen,
   nextMessage,
   nodeId,
+  nodeIdHex,
   send,
   start,
   startTcpForwarder,

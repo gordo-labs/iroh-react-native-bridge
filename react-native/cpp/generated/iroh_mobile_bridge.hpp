@@ -58,6 +58,9 @@ protected:
   jsi::Value cpp_uniffi_iroh_mobile_bridge_fn_func_node_id(
       jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
       size_t count);
+  jsi::Value cpp_uniffi_iroh_mobile_bridge_fn_func_node_id_hex(
+      jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+      size_t count);
   jsi::Value cpp_uniffi_iroh_mobile_bridge_fn_func_send(
       jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
       size_t count);
@@ -104,6 +107,9 @@ protected:
       jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
       size_t count);
   jsi::Value cpp_uniffi_iroh_mobile_bridge_checksum_func_node_id(
+      jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+      size_t count);
+  jsi::Value cpp_uniffi_iroh_mobile_bridge_checksum_func_node_id_hex(
       jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
       size_t count);
   jsi::Value cpp_uniffi_iroh_mobile_bridge_checksum_func_send(

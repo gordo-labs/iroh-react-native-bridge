@@ -546,19 +546,60 @@ pub struct EndpointStartOptions {
     /// Relay servers. `None` uses the Iroh default relays, an empty list disables
     /// relays (direct addresses only), and a non-empty list uses only those relays.
     pub relay_urls: Option<Vec<String>>,
+    /// 32-byte Ed25519 secret key as 64 hex chars, for a stable endpoint id across
+    /// restarts. `None` creates a fresh random identity.
+    pub secret_key: Option<String>,
 }
 
 /// Start the Iroh endpoint.
 #[uniffi::export]
 fn start(alpns: Option<Vec<String>>) -> Result<(), IrohBridgeError> {
-    start_endpoint(alpns, RelayMode::Default)
+    start_endpoint(alpns, RelayMode::Default, None)
 }
 
 /// Start the Iroh endpoint with explicit options (custom or disabled relays).
 #[uniffi::export]
 fn start_with_options(options: EndpointStartOptions) -> Result<(), IrohBridgeError> {
     let relay_mode = relay_mode_from_urls(options.relay_urls)?;
-    start_endpoint(options.alpns, relay_mode)
+    let secret_key = options
+        .secret_key
+        .as_deref()
+        .map(parse_secret_key)
+        .transpose()?;
+    start_endpoint(options.alpns, relay_mode, secret_key)
+}
+
+fn parse_secret_key(value: &str) -> Result<iroh::SecretKey, IrohBridgeError> {
+    let trimmed = value.trim();
+    if trimmed.len() != 64 || !trimmed.bytes().all(|b| b.is_ascii_hexdigit()) {
+        return Err(err("secret key must be 64 hex characters"));
+    }
+    let mut bytes = [0u8; 32];
+    for (index, chunk) in trimmed.as_bytes().chunks(2).enumerate() {
+        let pair = std::str::from_utf8(chunk).map_err(err)?;
+        bytes[index] = u8::from_str_radix(pair, 16).map_err(err)?;
+    }
+    Ok(iroh::SecretKey::from_bytes(&bytes))
+}
+
+/// Returns the running endpoint id as lowercase hex (empty when stopped).
+#[uniffi::export]
+fn node_id_hex() -> String {
+    with_state(|state| {
+        Ok(state
+            .endpoint
+            .as_ref()
+            .map(|endpoint| {
+                endpoint
+                    .id()
+                    .as_bytes()
+                    .iter()
+                    .map(|b| format!("{b:02x}"))
+                    .collect()
+            })
+            .unwrap_or_default())
+    })
+    .unwrap_or_default()
 }
 
 fn relay_mode_from_urls(relay_urls: Option<Vec<String>>) -> Result<RelayMode, IrohBridgeError> {
@@ -591,6 +632,7 @@ fn relay_mode_from_urls(relay_urls: Option<Vec<String>>) -> Result<RelayMode, Ir
 fn start_endpoint(
     alpns: Option<Vec<String>>,
     relay_mode: RelayMode,
+    secret_key: Option<iroh::SecretKey>,
 ) -> Result<(), IrohBridgeError> {
     with_state(|state| {
         if state.endpoint.is_some() {
@@ -605,12 +647,13 @@ fn start_endpoint(
             // happens, so connects only succeed when a direct addr is reachable
             // (same LAN). The caller picks the default relays, its own relays, or
             // explicitly disables them.
-            Endpoint::builder(iroh::endpoint::presets::Minimal)
+            let mut builder = Endpoint::builder(iroh::endpoint::presets::Minimal)
                 .relay_mode(relay_mode)
-                .alpns(endpoint_alpns.clone())
-                .bind()
-                .await
-                .map_err(err)
+                .alpns(endpoint_alpns.clone());
+            if let Some(secret_key) = secret_key {
+                builder = builder.secret_key(secret_key);
+            }
+            builder.bind().await.map_err(err)
         })?;
         state.node_id = Some(endpoint.id().to_z32());
         state.alpns = endpoint_alpns;
@@ -980,6 +1023,15 @@ mod tests {
     #[test]
     fn test_bridge_version() {
         assert_eq!(bridge_version(), "0.3.0");
+    }
+
+    #[test]
+    fn test_parse_secret_key() {
+        let hex = "11".repeat(32);
+        let key = parse_secret_key(&hex).unwrap();
+        assert_eq!(key.to_bytes(), [0x11u8; 32]);
+        assert!(parse_secret_key("zz").is_err());
+        assert!(parse_secret_key(&"g".repeat(64)).is_err());
     }
 
     #[test]

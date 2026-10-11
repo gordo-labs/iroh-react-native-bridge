@@ -123,7 +123,9 @@ console.log('local node', localId, 'running?', await bridge.isRunning());
    only those relays (up to 8, e.g. self-hosted `iroh-relay`), and
    `start({ relayUrls: [] })` disables relays (direct addresses only). Requires
    native artifacts that export `startWithOptions`; older ones reject with
-   `UNSUPPORTED_NATIVE_API`.
+   `UNSUPPORTED_NATIVE_API`. Pass `secretKey` (64 hex chars, kept in secure
+   storage) for a stable endpoint id across restarts; `nodeIdHex()` returns it as
+   hex.
 6. On teardown / logout: close streams/sessions, then `await bridge.stop()`.
 
 ### Native module name

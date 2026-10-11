@@ -194,6 +194,25 @@ export function nodeId(): string {
     }
 
 /**
+ * Returns the running endpoint id as lowercase hex (empty when stopped).
+ */
+export function nodeIdHex(): string {
+    return ((__rb: Uint8Array) => {
+        try {
+            return FfiConverterString.lift(__rb);
+        } finally {
+            nativeModule().rustbuffer_free(__rb);
+        }
+    })(uniffiCaller.rustCall(
+            /*caller:*/ (callStatus) => {
+                return nativeModule().ubrn_uniffi_iroh_mobile_bridge_fn_func_node_id_hex(
+                callStatus);
+            },
+            /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+    ));
+    }
+
+/**
  * Send one framed payload on an open connection.
  */
 export function send(connectionId: string, data: ArrayBuffer): void /*throws*/ {uniffiCaller.rustCallWithError(
@@ -359,7 +378,12 @@ export type EndpointStartOptions = {
      * Relay servers. `None` uses the Iroh default relays, an empty list disables
      * relays (direct addresses only), and a non-empty list uses only those relays.
      */
-    relayUrls?: Array<string>
+    relayUrls?: Array<string>,
+    /**
+     * 32-byte Ed25519 secret key as 64 hex chars, for a stable endpoint id across
+     * restarts. `None` creates a fresh random identity.
+     */
+    secretKey?: string
 }
 
 /**
@@ -384,16 +408,19 @@ const FfiConverterTypeEndpointStartOptions = (() => {
         read(from: RustBuffer): TypeName {
             return {
                 alpns: FfiConverterOptionalSequenceString.read(from),
-                relayUrls: FfiConverterOptionalSequenceString.read(from)
+                relayUrls: FfiConverterOptionalSequenceString.read(from),
+                secretKey: FfiConverterOptionalString.read(from)
             };
         }
         write(value: TypeName, into: RustBuffer): void {
             FfiConverterOptionalSequenceString.write(value.alpns, into);
             FfiConverterOptionalSequenceString.write(value.relayUrls, into);
+            FfiConverterOptionalString.write(value.secretKey, into);
         }
         allocationSize(value: TypeName): number {
             return FfiConverterOptionalSequenceString.allocationSize(value.alpns) +
-             FfiConverterOptionalSequenceString.allocationSize(value.relayUrls);
+             FfiConverterOptionalSequenceString.allocationSize(value.relayUrls) +
+             FfiConverterOptionalString.allocationSize(value.secretKey);
 
         }
     };
@@ -1143,6 +1170,9 @@ function uniffiEnsureInitialized() {
     }
     if (nativeModule().ubrn_uniffi_iroh_mobile_bridge_checksum_func_node_id() !== 22079) {
         throw new UniffiInternalError.ApiChecksumMismatch("uniffi_iroh_mobile_bridge_checksum_func_node_id");
+    }
+    if (nativeModule().ubrn_uniffi_iroh_mobile_bridge_checksum_func_node_id_hex() !== 48102) {
+        throw new UniffiInternalError.ApiChecksumMismatch("uniffi_iroh_mobile_bridge_checksum_func_node_id_hex");
     }
     if (nativeModule().ubrn_uniffi_iroh_mobile_bridge_checksum_func_send() !== 17431) {
         throw new UniffiInternalError.ApiChecksumMismatch("uniffi_iroh_mobile_bridge_checksum_func_send");

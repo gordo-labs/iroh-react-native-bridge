@@ -21,6 +21,11 @@ export type IrohStartOptions = {
    * only those relays.
    */
   relayUrls?: string[];
+  /**
+   * 32-byte Ed25519 secret key (64 hex chars) for a stable endpoint id across
+   * restarts. Store it in secure storage; omit for a fresh random identity.
+   */
+  secretKey?: string;
 };
 
 export type IrohConnectOptions = {
@@ -102,6 +107,8 @@ export type IrohTcpForwarder = {
 export type IrohBridge = {
   bridgeVersion(): string | Promise<string>;
   nodeId(): string | Promise<string>;
+  /** Running endpoint id as lowercase hex; empty when stopped or with older native artifacts. */
+  nodeIdHex(): string | Promise<string>;
   start(options?: IrohStartOptions): Promise<void>;
   stop(): Promise<void>;
   isRunning(): boolean | Promise<boolean>;
