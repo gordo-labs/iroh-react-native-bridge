@@ -3,7 +3,7 @@
 Generic React Native TurboModule for **Iroh endpoints** and **length-prefixed
 byte streams** on iOS and Android.
 
-This package is **beta** (`0.2.0`). It targets modern React Native with the
+This package is **beta** (`0.3.0`). It targets modern React Native with the
 **New Architecture** enabled. It will **not** work in Expo Go (custom native
 modules cannot load there).
 
@@ -19,8 +19,9 @@ and use `@ubjs/core` at runtime.
 npm install @gordo-labs/react-native-iroh
 ```
 
-`0.2.0` is published on npm
-([package page](https://www.npmjs.com/package/@gordo-labs/react-native-iroh)).
+The latest version on npm is `0.2.0`
+([package page](https://www.npmjs.com/package/@gordo-labs/react-native-iroh)); `0.3.0` (`startTcpForwarder()`)
+is on `main` and is published by the `Publish npm package` workflow.
 Contributors linking a local checkout should follow
 [Building → Local App Integration](../docs/BUILDING.md#local-app-integration).
 

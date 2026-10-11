@@ -2,9 +2,9 @@
 
 ## Supported Versions
 
-This project is beta. `@gordo-labs/react-native-iroh@0.2.0` is published on
-npm. Security fixes apply to the latest public `0.2.x` package and the active
-development branch.
+This project is beta. `@gordo-labs/react-native-iroh@0.2.0` is the latest version
+on npm; `0.3.0` is on `main` pending publication. Security fixes apply to the
+latest published package and the active development branch.
 
 Older 0.x versions may not receive backports.
 
