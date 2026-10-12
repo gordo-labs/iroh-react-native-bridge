@@ -193,41 +193,56 @@ async fn pump(
     let (mut tcp_read, mut tcp_write) = tcp.into_split();
 
     let up_stats = stats.clone();
-    let upstream = async move {
-        let mut buf = vec![0u8; COPY_BUFFER_BYTES];
-        loop {
-            let n = tcp_read.read(&mut buf).await.map_err(err)?;
-            if n == 0 {
-                // Local side finished its request body: half-close the stream.
-                let _ = send.finish();
-                return Ok::<(), IrohBridgeError>(());
-            }
-            send.write_all(&buf[..n]).await.map_err(err)?;
-            if let Ok(mut state) = up_stats.lock() {
-                state.stats.bytes_up += n as u64;
-            }
-        }
-    };
-    let downstream = async move {
-        let mut buf = vec![0u8; COPY_BUFFER_BYTES];
-        loop {
-            let n = match recv.read(&mut buf).await.map_err(err)? {
-                Some(n) => n,
-                None => {
-                    let _ = tcp_write.shutdown().await;
+    let result = {
+        let upstream = async {
+            let mut buf = vec![0u8; COPY_BUFFER_BYTES];
+            loop {
+                let n = tcp_read.read(&mut buf).await.map_err(err)?;
+                if n == 0 {
+                    // Local side finished its request body: half-close the stream.
+                    let _ = send.finish();
                     return Ok::<(), IrohBridgeError>(());
                 }
-            };
-            if let Ok(mut state) = stats.lock() {
-                state.record_down(n, Instant::now());
+                send.write_all(&buf[..n]).await.map_err(err)?;
+                if let Ok(mut state) = up_stats.lock() {
+                    state.stats.bytes_up += n as u64;
+                }
             }
-            tcp_write.write_all(&buf[..n]).await.map_err(err)?;
+        };
+        let downstream = async {
+            let mut buf = vec![0u8; COPY_BUFFER_BYTES];
+            loop {
+                let n = match recv.read(&mut buf).await.map_err(err)? {
+                    Some(n) => n,
+                    None => {
+                        let _ = tcp_write.shutdown().await;
+                        return Ok::<(), IrohBridgeError>(());
+                    }
+                };
+                if let Ok(mut state) = stats.lock() {
+                    state.record_down(n, Instant::now());
+                }
+                tcp_write.write_all(&buf[..n]).await.map_err(err)?;
+            }
+        };
+        // The response side decides the end of the exchange; a local reader that keeps its
+        // write half open (HTTP keep-alive) must not hold the stream open after the peer is done.
+        tokio::pin!(upstream);
+        tokio::pin!(downstream);
+        tokio::select! {
+            response = &mut downstream => response,
+            request = &mut upstream => {
+                request?;
+                downstream.await
+            }
         }
     };
-    // The response side decides the end of the exchange; a local reader that keeps its
-    // write half open (HTTP keep-alive) must not hold the stream open after the peer is done.
-    let (up, down) = tokio::join!(upstream, downstream);
-    down.and(up)
+    // The peer has finished its response. Release the remaining request half
+    // even when an HTTP client pool has not closed its TCP write half yet.
+    if result.is_ok() {
+        let _ = send.finish();
+    }
+    result
 }
 
 /// Listen on 127.0.0.1 and forward every accepted TCP connection over its own QUIC stream.

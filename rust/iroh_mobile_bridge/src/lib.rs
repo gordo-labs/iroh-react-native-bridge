@@ -1331,17 +1331,33 @@ mod tests {
                     .expect("write");
                 let mut response = Vec::new();
                 tcp.read_to_end(&mut response).expect("read");
-                response
+                (response, tcp)
             })
         };
         let big = fetch("/big", forwarder.port);
         let small = fetch("/small", forwarder.port);
-        let small = small.join().unwrap();
-        let big = big.join().unwrap();
+        let (small, small_tcp) = small.join().unwrap();
+        let (big, big_tcp) = big.join().unwrap();
         assert!(small.ends_with(b"pong"));
         assert!(big.len() > BIG);
 
+        // Keep the client's write halves open after response EOF, as HTTP pools
+        // may do. Completion must release the forwarder tasks independently.
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(2);
+        while tcp_forwarder_stats(forwarder.id.clone())
+            .unwrap()
+            .active_connections
+            != 0
+            && std::time::Instant::now() < deadline
+        {
+            std::thread::sleep(std::time::Duration::from_millis(10));
+        }
         let stats = tcp_forwarder_stats(forwarder.id.clone()).expect("stats");
+        assert_eq!(
+            stats.active_connections, 0,
+            "response EOF must release tasks while client write halves remain open"
+        );
+        drop((small_tcp, big_tcp));
         assert_eq!(stats.total_connections, 2);
         assert_eq!(stats.failed_streams, 0);
         assert!(stats.bytes_down >= (BIG + 4) as u64);

@@ -14,6 +14,9 @@ Source release on `main`. npm still serves `0.2.0` until the `Publish npm packag
   with an optional per-stream preamble, single-flight session dial and
   throughput counters (`stats()`). Bytes are pumped natively; nothing crosses the
   JavaScript bridge. `bridge.stop()` also stops every forwarder.
+- Forwarder: a connection is released as soon as the peer finishes its response, also when the local HTTP client
+  keeps its write half open (keep-alive pools). Before, both halves had to close and finished exchanges stayed
+  counted as active. Needs the native libraries rebuilt (`npm run ubrn:ios`, `npm run ubrn:android`).
 - `check-release-package` now fails if the iOS xcframework or Android jniLibs
   are missing UniFFI symbols that the generated C++ bindings export, so a
   host-only `ubrn:generate` cannot ship against a stale `libiroh_mobile_bridge`.
