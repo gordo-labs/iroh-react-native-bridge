@@ -531,6 +531,136 @@ fn bridge_version() -> String {
     env!("CARGO_PKG_VERSION").to_string()
 }
 
+/// Why a dial may be failing, as a JSON string (best effort, never an error).
+///
+/// A timed-out `connect` says nothing about where it stopped. This reports what the endpoint can see: whether it
+/// reached a home relay, its own addresses, and whether the peer's relay host resolves and accepts TCP on 443.
+/// Typical readings: `dns.error` set = name resolution fails on this network; `tcp` all failing = the relay is
+/// unreachable from here; everything fine = the relay cannot reach the peer (the peer lost its relay connection).
+///
+/// Async on purpose: the probe takes seconds and must not hold the JavaScript thread.
+#[uniffi::export]
+async fn dial_diagnostics(relay_url: Option<String>, timeout_ms: Option<u32>) -> String {
+    let (done, result) = tokio::sync::oneshot::channel();
+    std::thread::spawn(move || {
+        let _ = done.send(dial_diagnostics_blocking(relay_url, timeout_ms));
+    });
+    result.await.unwrap_or_else(|_| {
+        serde_json::json!({ "running": false, "error": "diagnostics task ended early" }).to_string()
+    })
+}
+
+fn dial_diagnostics_blocking(relay_url: Option<String>, timeout_ms: Option<u32>) -> String {
+    let timeout = Duration::from_millis(
+        timeout_ms
+            .map(u64::from)
+            .filter(|value| *value > 0)
+            .unwrap_or(4_000)
+            .min(15_000),
+    );
+    let state = with_state(|state| {
+        Ok((
+            state.endpoint.clone(),
+            state.runtime.handle().clone(),
+            state.sessions.len(),
+            state.connections.len(),
+        ))
+    });
+    let Ok((endpoint, runtime, sessions, streams)) = state else {
+        return serde_json::json!({ "running": false, "error": "bridge state unavailable" })
+            .to_string();
+    };
+    let Some(endpoint) = endpoint else {
+        return serde_json::json!({ "running": false }).to_string();
+    };
+    runtime.block_on(async move {
+        let started = std::time::Instant::now();
+        let home_relay_connected = time::timeout(timeout, endpoint.online()).await.is_ok();
+        let online_ms = started.elapsed().as_millis() as u64;
+        let addr = endpoint.addr();
+        let mut home_relays = Vec::new();
+        let (mut ipv4, mut ipv6) = (0u32, 0u32);
+        for transport in addr.addrs.iter() {
+            match transport {
+                TransportAddr::Relay(url) => home_relays.push(url.to_string()),
+                TransportAddr::Ip(socket) if socket.is_ipv4() => ipv4 += 1,
+                TransportAddr::Ip(_) => ipv6 += 1,
+                _ => {}
+            }
+        }
+        let mut report = serde_json::json!({
+            "running": true,
+            "nodeId": endpoint.id().to_z32(),
+            "homeRelayConnected": home_relay_connected,
+            "homeRelayWaitMs": online_ms,
+            "homeRelays": home_relays,
+            "localIpv4Addrs": ipv4,
+            "localIpv6Addrs": ipv6,
+            "cachedSessions": sessions,
+            "openStreams": streams,
+        });
+        let Some(relay) = relay_url
+            .as_deref()
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+        else {
+            return report.to_string();
+        };
+        let host = RelayUrl::from_str(relay).ok().and_then(|url| {
+            url.host_str()
+                .map(|host| host.trim_end_matches('.').to_string())
+        });
+        let Some(host) = host else {
+            report["relay"] = serde_json::json!({ "url": relay, "error": "invalid relay URL" });
+            return report.to_string();
+        };
+        let mut relay_report = serde_json::json!({ "host": host });
+        let dns_started = std::time::Instant::now();
+        let resolved: Result<Vec<std::net::IpAddr>, String> = match endpoint.dns_resolver() {
+            Ok(resolver) => resolver
+                .lookup_ipv4_ipv6(host.clone(), timeout)
+                .await
+                .map(|addrs| addrs.collect())
+                .map_err(|error| error.to_string()),
+            Err(error) => Err(error.to_string()),
+        };
+        relay_report["dnsMs"] = serde_json::json!(dns_started.elapsed().as_millis() as u64);
+        match resolved {
+            Err(error) => relay_report["dns"] = serde_json::json!({ "error": error }),
+            Ok(addrs) => {
+                relay_report["dns"] = serde_json::json!({
+                    "ipv4": addrs.iter().filter(|ip| ip.is_ipv4()).count(),
+                    "ipv6": addrs.iter().filter(|ip| ip.is_ipv6()).count(),
+                });
+                let mut tcp = Vec::new();
+                let first_v4 = addrs.iter().find(|ip| ip.is_ipv4()).copied();
+                let first_v6 = addrs.iter().find(|ip| ip.is_ipv6()).copied();
+                for ip in [first_v4, first_v6].into_iter().flatten() {
+                    let tcp_started = std::time::Instant::now();
+                    let outcome = time::timeout(
+                        timeout,
+                        tokio::net::TcpStream::connect(SocketAddr::new(ip, 443)),
+                    )
+                    .await;
+                    tcp.push(serde_json::json!({
+                        "family": if ip.is_ipv4() { "ipv4" } else { "ipv6" },
+                        "ok": matches!(outcome, Ok(Ok(_))),
+                        "ms": tcp_started.elapsed().as_millis() as u64,
+                        "error": match outcome {
+                            Ok(Ok(_)) => serde_json::Value::Null,
+                            Ok(Err(error)) => serde_json::json!(error.to_string()),
+                            Err(_) => serde_json::json!("timed out"),
+                        },
+                    }));
+                }
+                relay_report["tcp"] = serde_json::json!(tcp);
+            }
+        }
+        report["relay"] = relay_report;
+        report.to_string()
+    })
+}
+
 /// Returns the Iroh node id as z-base-32, matching @momics/iroh-http-node.
 #[uniffi::export]
 fn node_id() -> String {
@@ -1452,6 +1582,46 @@ mod tests {
             tcp_forwarder_stats(forwarder.id.clone()).unwrap()
         );
         stop_tcp_forwarder(forwarder.id);
+        stop();
+    }
+
+    #[test]
+    fn dial_diagnostics_reports_a_stopped_bridge_without_failing() {
+        let _guard = test_guard();
+        stop();
+        let report: serde_json::Value =
+            serde_json::from_str(&dial_diagnostics_blocking(None, None)).unwrap();
+        assert_eq!(report["running"], false);
+    }
+
+    #[test]
+    fn dial_diagnostics_describes_the_endpoint_and_rejects_a_bad_relay_url() {
+        let _guard = test_guard();
+        stop();
+        start(None).expect("endpoint should start");
+        let report: serde_json::Value = serde_json::from_str(&dial_diagnostics_blocking(
+            Some("not a url".into()),
+            Some(200),
+        ))
+        .unwrap();
+        assert_eq!(report["running"], true);
+        assert!(report["nodeId"].as_str().is_some_and(|id| !id.is_empty()));
+        assert!(report["homeRelayConnected"].is_boolean());
+        assert_eq!(report["relay"]["error"], "invalid relay URL");
+        stop();
+    }
+
+    /// Manual: `DIAG_RELAY=https://euc1-1.relay.n0.iroh.link cargo test --lib dial_diagnostics_live -- --ignored --nocapture`
+    #[test]
+    #[ignore]
+    fn dial_diagnostics_live() {
+        let _guard = test_guard();
+        stop();
+        start(None).expect("endpoint should start");
+        println!(
+            "{}",
+            dial_diagnostics_blocking(std::env::var("DIAG_RELAY").ok(), Some(5_000))
+        );
         stop();
     }
 }

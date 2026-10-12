@@ -17,6 +17,9 @@ Source release on `main`. npm still serves `0.2.0` until the `Publish npm packag
 - Forwarder: a connection is released as soon as the peer finishes its response, also when the local HTTP client
   keeps its write half open (keep-alive pools). Before, both halves had to close and finished exchanges stayed
   counted as active. Needs the native libraries rebuilt (`npm run ubrn:ios`, `npm run ubrn:android`).
+- Added `dialDiagnostics({ relayUrl })`: when a dial times out it reports whether the endpoint reached a home relay,
+  its own address families, and whether the peer's relay host resolves and accepts TCP from this network. Async on
+  the native side (it takes seconds and must not hold the JavaScript thread). Never rejects.
 - `check-release-package` now fails if the iOS xcframework or Android jniLibs
   are missing UniFFI symbols that the generated C++ bindings export, so a
   host-only `ubrn:generate` cannot ship against a stale `libiroh_mobile_bridge`.

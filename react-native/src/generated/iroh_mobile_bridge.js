@@ -29,6 +29,7 @@ __export(iroh_mobile_bridge_exports, {
   connect: () => connect,
   connectTarget: () => connectTarget,
   default: () => iroh_mobile_bridge_default,
+  dialDiagnostics: () => dialDiagnostics,
   echoRoundtrip: () => echoRoundtrip,
   isRunning: () => isRunning,
   isStreamOpen: () => isStreamOpen,
@@ -138,6 +139,46 @@ function connectTarget(targetKind, nodeId2, endpointTicket, directAddresses, rel
     /*liftString:*/
     FfiConverterString.lift.bind(FfiConverterString)
   ));
+}
+async function dialDiagnostics(relayUrl, timeoutMs, asyncOpts_) {
+  const __stack = uniffiIsDebug ? new Error().stack : void 0;
+  try {
+    return await (0, import_core.uniffiRustCallAsync)(
+      /*rustCaller:*/
+      uniffiCaller,
+      /*rustFutureFunc:*/
+      () => {
+        return iroh_mobile_bridge_ffi_default().ubrn_uniffi_iroh_mobile_bridge_fn_func_dial_diagnostics(
+          FfiConverterOptionalString.lower(relayUrl, iroh_mobile_bridge_ffi_default().rustbuffer_alloc),
+          FfiConverterOptionalUInt32.lower(timeoutMs, iroh_mobile_bridge_ffi_default().rustbuffer_alloc)
+        );
+      },
+      /*pollFunc:*/
+      iroh_mobile_bridge_ffi_default().ubrn_ffi_iroh_mobile_bridge_rust_future_poll_rust_buffer,
+      /*cancelFunc:*/
+      iroh_mobile_bridge_ffi_default().ubrn_ffi_iroh_mobile_bridge_rust_future_cancel_rust_buffer,
+      /*completeFunc:*/
+      iroh_mobile_bridge_ffi_default().ubrn_ffi_iroh_mobile_bridge_rust_future_complete_rust_buffer,
+      /*freeFunc:*/
+      iroh_mobile_bridge_ffi_default().ubrn_ffi_iroh_mobile_bridge_rust_future_free_rust_buffer,
+      // Async returns always go through the JS-side converter: the
+      // FFI symbol returns the future handle (u64), and the user-level
+      // RustBuffer comes back via the shared `rust_future_complete_*`
+      // export. The bytes the runtime hands back must be deserialized
+      // here using the per-callable return-type converter.
+      /*liftFunc:*/
+      FfiConverterString.lift.bind(FfiConverterString),
+      /*liftString:*/
+      FfiConverterString.lift.bind(FfiConverterString),
+      /*asyncOpts:*/
+      asyncOpts_
+    );
+  } catch (__error) {
+    if (uniffiIsDebug && __error instanceof Error) {
+      __error.stack = __stack;
+    }
+    throw __error;
+  }
 }
 function echoRoundtrip(input) {
   return ((__rb) => {
@@ -876,6 +917,9 @@ function uniffiEnsureInitialized() {
   if (iroh_mobile_bridge_ffi_default().ubrn_uniffi_iroh_mobile_bridge_checksum_func_connect_target() !== 43714) {
     throw new import_core.UniffiInternalError.ApiChecksumMismatch("uniffi_iroh_mobile_bridge_checksum_func_connect_target");
   }
+  if (iroh_mobile_bridge_ffi_default().ubrn_uniffi_iroh_mobile_bridge_checksum_func_dial_diagnostics() !== 2936) {
+    throw new import_core.UniffiInternalError.ApiChecksumMismatch("uniffi_iroh_mobile_bridge_checksum_func_dial_diagnostics");
+  }
   if (iroh_mobile_bridge_ffi_default().ubrn_uniffi_iroh_mobile_bridge_checksum_func_echo_roundtrip() !== 22986) {
     throw new import_core.UniffiInternalError.ApiChecksumMismatch("uniffi_iroh_mobile_bridge_checksum_func_echo_roundtrip");
   }
@@ -930,6 +974,7 @@ var iroh_mobile_bridge_default = Object.freeze({
   close,
   connect,
   connectTarget,
+  dialDiagnostics,
   echoRoundtrip,
   isRunning,
   isStreamOpen,

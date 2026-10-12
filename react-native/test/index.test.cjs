@@ -290,3 +290,23 @@ test('TCP forwarder rejects invalid ports before crossing the native boundary', 
   );
   assert.equal(forwarderCalls.length, 0);
 });
+
+test('dialDiagnostics parses the native report and never rejects', async () => {
+  const { bridge, runtime } = loadBridgeRuntime();
+  // Native runtime that predates the call.
+  assert.deepEqual(await bridge.dialDiagnostics({ relayUrl: 'https://relay.example' }), { unavailable: true });
+
+  const calls = [];
+  runtime.dialDiagnostics = (relayUrl, timeoutMs) => {
+    calls.push([relayUrl, timeoutMs]);
+    return JSON.stringify({ running: true, homeRelayConnected: false, relay: { dns: { error: 'no servers' } } });
+  };
+  const report = await bridge.dialDiagnostics({ relayUrl: ' https://relay.example ', timeoutMs: 3000 });
+  assert.deepEqual(calls, [['https://relay.example', 3000]]);
+  assert.equal(report.homeRelayConnected, false);
+  assert.equal(report.relay.dns.error, 'no servers');
+
+  runtime.dialDiagnostics = () => { throw new Error('boom'); };
+  const failed = await bridge.dialDiagnostics();
+  assert.equal(failed.unavailable, true);
+});

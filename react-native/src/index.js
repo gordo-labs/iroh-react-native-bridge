@@ -483,6 +483,21 @@ function getGeneratedIrohBridge() {
     isRunning() {
       return callRuntime(() => runtime.isRunning());
     },
+    /**
+     * Why a dial may be failing: home relay, own addresses, and DNS + TCP reachability of the peer's relay.
+     * Best effort: resolves to `{ unavailable: true }` with an older native runtime.
+     */
+    async dialDiagnostics(options) {
+      if (typeof runtime.dialDiagnostics !== 'function') return { unavailable: true };
+      const relayUrl = typeof options?.relayUrl === 'string' && options.relayUrl.trim() ? options.relayUrl.trim() : undefined;
+      const timeoutMs = Number.isInteger(options?.timeoutMs) && options.timeoutMs > 0 ? options.timeoutMs : undefined;
+      try {
+        // Async on the native side (a promise); `await` also accepts a plain string from a test double.
+        return JSON.parse(await runtime.dialDiagnostics(relayUrl, timeoutMs));
+      } catch (error) {
+        return { unavailable: true, error: error instanceof Error ? error.message : String(error) };
+      }
+    },
     connect(options) {
       return connectStream(options);
     },
@@ -549,6 +564,9 @@ function getUnavailableIrohBridge(error) {
     },
     async connect() {
       throw unavailable;
+    },
+    async dialDiagnostics() {
+      return { unavailable: true };
     },
     async connectTarget() {
       throw unavailable;

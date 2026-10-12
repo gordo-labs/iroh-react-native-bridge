@@ -6,7 +6,7 @@
 import nativeModule from "./iroh_mobile_bridge-ffi";
 import { type UniffiRustFutureContinuationCallback, type UniffiForeignFutureDroppedCallback, type UniffiForeignFutureDroppedCallbackStruct,
 } from "./iroh_mobile_bridge-ffi";
-import { type UniffiByteArray, AbstractFfiConverterByteArray, FfiConverterArray, FfiConverterArrayBuffer, FfiConverterBool, FfiConverterInt32, FfiConverterOptional, FfiConverterUInt16, FfiConverterUInt32, FfiConverterUInt64, FfiConverterUInt8, RustBuffer, UniffiError, UniffiInternalError, UniffiRustCaller, uniffiCreateFfiConverterString, uniffiCreateRecord, uniffiTypeNameSymbol, variantOrdinalSymbol,
+import { type UniffiByteArray, AbstractFfiConverterByteArray, FfiConverterArray, FfiConverterArrayBuffer, FfiConverterBool, FfiConverterInt32, FfiConverterOptional, FfiConverterUInt16, FfiConverterUInt32, FfiConverterUInt64, FfiConverterUInt8, RustBuffer, UniffiError, UniffiInternalError, UniffiRustCaller, uniffiCreateFfiConverterString, uniffiCreateRecord, uniffiRustCallAsync, uniffiTypeNameSymbol, variantOrdinalSymbol,
 } from "@ubjs/core";
 const uniffiCaller = new UniffiRustCaller(() => ({ code: 0 }));
 
@@ -103,6 +103,47 @@ export function connectTarget(targetKind: string, nodeId: string | undefined, en
             },
             /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
     ));
+    }
+
+/**
+ * Why a dial may be failing, as a JSON string (best effort, never an error).
+ *
+ * A timed-out `connect` says nothing about where it stopped. This reports what the endpoint can see: whether it
+ * reached a home relay, its own addresses, and whether the peer's relay host resolves and accepts TCP on 443.
+ * Typical readings: `dns.error` set = name resolution fails on this network; `tcp` all failing = the relay is
+ * unreachable from here; everything fine = the relay cannot reach the peer (the peer lost its relay connection).
+ *
+ * Async on purpose: the probe takes seconds and must not hold the JavaScript thread.
+ */
+export async function dialDiagnostics(relayUrl: string | undefined, timeoutMs: number | undefined, asyncOpts_?: { signal: AbortSignal }): Promise<string> {
+    const __stack = uniffiIsDebug ? new Error().stack : undefined;
+    try {
+        return await uniffiRustCallAsync(
+            /*rustCaller:*/ uniffiCaller,
+            /*rustFutureFunc:*/ () => {
+                return nativeModule().ubrn_uniffi_iroh_mobile_bridge_fn_func_dial_diagnostics(FfiConverterOptionalString.lower(relayUrl, nativeModule().rustbuffer_alloc),FfiConverterOptionalUInt32.lower(timeoutMs, nativeModule().rustbuffer_alloc)
+                );
+            },
+            /*pollFunc:*/ nativeModule().ubrn_ffi_iroh_mobile_bridge_rust_future_poll_rust_buffer,
+            /*cancelFunc:*/ nativeModule().ubrn_ffi_iroh_mobile_bridge_rust_future_cancel_rust_buffer,
+            /*completeFunc:*/ nativeModule().ubrn_ffi_iroh_mobile_bridge_rust_future_complete_rust_buffer,
+            /*freeFunc:*/ nativeModule().ubrn_ffi_iroh_mobile_bridge_rust_future_free_rust_buffer,
+            // Async returns always go through the JS-side converter: the
+            // FFI symbol returns the future handle (u64), and the user-level
+            // RustBuffer comes back via the shared `rust_future_complete_*`
+            // export. The bytes the runtime hands back must be deserialized
+            // here using the per-callable return-type converter.
+            /*liftFunc:*/ FfiConverterString.lift.bind(FfiConverterString),
+            /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+            /*asyncOpts:*/ asyncOpts_,
+
+        );
+    } catch (__error: any) {
+        if (uniffiIsDebug && __error instanceof Error) {
+            __error.stack = __stack;
+        }
+        throw __error;
+    }
     }
 
 /**
@@ -1062,6 +1103,9 @@ function uniffiEnsureInitialized() {
     }
     if (nativeModule().ubrn_uniffi_iroh_mobile_bridge_checksum_func_connect_target() !== 43714) {
         throw new UniffiInternalError.ApiChecksumMismatch("uniffi_iroh_mobile_bridge_checksum_func_connect_target");
+    }
+    if (nativeModule().ubrn_uniffi_iroh_mobile_bridge_checksum_func_dial_diagnostics() !== 2936) {
+        throw new UniffiInternalError.ApiChecksumMismatch("uniffi_iroh_mobile_bridge_checksum_func_dial_diagnostics");
     }
     if (nativeModule().ubrn_uniffi_iroh_mobile_bridge_checksum_func_echo_roundtrip() !== 22986) {
         throw new UniffiInternalError.ApiChecksumMismatch("uniffi_iroh_mobile_bridge_checksum_func_echo_roundtrip");

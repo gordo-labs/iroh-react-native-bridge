@@ -99,6 +99,12 @@ export type IrohBridge = {
   start(options?: IrohStartOptions): Promise<void>;
   stop(): Promise<void>;
   isRunning(): boolean | Promise<boolean>;
+  /**
+   * Why a dial may be failing. Never rejects; `{ unavailable: true }` with a native runtime that predates it.
+   * `relay.dns.error` = name resolution fails on this network; every `relay.tcp[].ok` false = the relay cannot be
+   * reached from here; all fine = the relay cannot reach the peer.
+   */
+  dialDiagnostics(options?: { relayUrl?: string; timeoutMs?: number }): Promise<IrohDialDiagnostics>;
   /** Opens one framed QUIC stream, reusing a warm peer session when possible. */
   connect(options: IrohConnectOptions): Promise<IrohBridgeConnection>;
   /** Opens a stream from a validated endpoint ticket or explicit endpoint address. */
@@ -117,3 +123,25 @@ export type IrohBridge = {
 export declare const MODULE_NAME = "IrohBridge";
 export declare function getIrohBridge(): IrohBridge;
 export default getIrohBridge;
+
+export type IrohDialDiagnostics = {
+  unavailable?: boolean;
+  error?: string;
+  running?: boolean;
+  nodeId?: string;
+  homeRelayConnected?: boolean;
+  homeRelayWaitMs?: number;
+  homeRelays?: string[];
+  localIpv4Addrs?: number;
+  localIpv6Addrs?: number;
+  cachedSessions?: number;
+  openStreams?: number;
+  relay?: {
+    host?: string;
+    url?: string;
+    error?: string;
+    dnsMs?: number;
+    dns?: { ipv4?: number; ipv6?: number; error?: string };
+    tcp?: Array<{ family: 'ipv4' | 'ipv6'; ok: boolean; ms: number; error: string | null }>;
+  };
+};
