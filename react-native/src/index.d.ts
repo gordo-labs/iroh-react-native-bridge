@@ -105,6 +105,12 @@ export type IrohBridge = {
    * reached from here; all fine = the relay cannot reach the peer.
    */
   dialDiagnostics(options?: { relayUrl?: string; timeoutMs?: number }): Promise<IrohDialDiagnostics>;
+  /**
+   * Network path of the cached session to `nodeId` for `alpn`. Snapshot only; never dials and never rejects.
+   * `path`: `direct` (IP only), `relay` (relay only), `mixed` (both open), `none` (no live session).
+   * `selected` is the path carrying data now. `{ unavailable: true }` with a native runtime that predates it.
+   */
+  peerPath(options: { nodeId: string; alpn: string }): IrohPeerPath;
   /** Opens one framed QUIC stream, reusing a warm peer session when possible. */
   connect(options: IrohConnectOptions): Promise<IrohBridgeConnection>;
   /** Opens a stream from a validated endpoint ticket or explicit endpoint address. */
@@ -144,4 +150,17 @@ export type IrohDialDiagnostics = {
     dns?: { ipv4?: number; ipv6?: number; error?: string };
     tcp?: Array<{ family: 'ipv4' | 'ipv6'; ok: boolean; ms: number; error: string | null }>;
   };
+};
+
+export type IrohPeerPath = {
+  unavailable?: boolean;
+  error?: string;
+  /** `direct`: only IP paths open; `relay`: only relay paths; `mixed`: both open; `none`: no live session. */
+  path?: 'direct' | 'relay' | 'mixed' | 'none';
+  /** Kind of the path QUIC currently sends application data on. */
+  selected?: 'direct' | 'relay' | null;
+  /** Relay URL of the selected relay path (or of any open relay path). Null when none. */
+  relayUrl?: string | null;
+  /** Number of open network paths on the session. */
+  openPaths?: number;
 };

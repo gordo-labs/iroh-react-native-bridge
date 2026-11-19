@@ -661,6 +661,76 @@ fn dial_diagnostics_blocking(relay_url: Option<String>, timeout_ms: Option<u32>)
     })
 }
 
+/// Network path of the cached QUIC session to `node_id` for `alpn`, as a JSON string (never an error).
+///
+/// `path` is what the session has open right now: `direct` (IP paths only), `relay` (relay paths only),
+/// `mixed` (a direct and a relay path are open at once) or `none` (no live session for this peer and ALPN).
+/// `selected` is the kind of path QUIC currently sends application data on (`direct`, `relay`, or null).
+/// `relayUrl` is the relay of the selected relay path, or of any open relay path, when one exists.
+///
+/// Synchronous and non-blocking: it reads a snapshot from the QUIC connection and never dials.
+#[uniffi::export]
+fn peer_path(node_id: String, alpn: String) -> String {
+    let connection = with_state(|state| {
+        let remote_id = parse_endpoint_id(&node_id)?;
+        let key = session_key(&remote_id, &normalize_alpn(&alpn)?);
+        Ok(state
+            .sessions
+            .get(&key)
+            .map(|session| session.connection.clone()))
+    })
+    .ok()
+    .flatten();
+    connection_path_report(connection.as_ref()).to_string()
+}
+
+fn connection_path_report(connection: Option<&Connection>) -> serde_json::Value {
+    let none =
+        serde_json::json!({ "path": "none", "selected": null, "relayUrl": null, "openPaths": 0 });
+    let Some(connection) = connection.filter(|connection| connection.close_reason().is_none())
+    else {
+        return none;
+    };
+    let (mut direct_open, mut relay_open) = (false, None::<String>);
+    let (mut selected, mut selected_relay) = (None::<&str>, None::<String>);
+    let mut open_paths = 0u32;
+    for path in connection.paths().iter() {
+        open_paths += 1;
+        let relay = match path.remote_addr() {
+            TransportAddr::Relay(url) => Some(url.to_string()),
+            _ => None,
+        };
+        if path.is_ip() {
+            direct_open = true;
+        }
+        if let Some(url) = &relay {
+            relay_open.get_or_insert_with(|| url.clone());
+        }
+        if path.is_selected() {
+            selected = if path.is_ip() {
+                Some("direct")
+            } else if relay.is_some() {
+                Some("relay")
+            } else {
+                None
+            };
+            selected_relay = relay;
+        }
+    }
+    let path = match (direct_open, relay_open.is_some()) {
+        (true, true) => "mixed",
+        (true, false) => "direct",
+        (false, true) => "relay",
+        (false, false) => "none",
+    };
+    serde_json::json!({
+        "path": path,
+        "selected": selected,
+        "relayUrl": selected_relay.or(relay_open),
+        "openPaths": open_paths,
+    })
+}
+
 /// Returns the Iroh node id as z-base-32, matching @momics/iroh-http-node.
 #[uniffi::export]
 fn node_id() -> String {
@@ -1608,6 +1678,89 @@ mod tests {
         assert!(report["nodeId"].as_str().is_some_and(|id| !id.is_empty()));
         assert!(report["homeRelayConnected"].is_boolean());
         assert_eq!(report["relay"]["error"], "invalid relay URL");
+        stop();
+    }
+
+    #[test]
+    fn peer_path_reports_none_without_a_session() {
+        let _guard = test_guard();
+        stop();
+        let stopped: serde_json::Value = serde_json::from_str(&peer_path(
+            test_endpoint_id().to_z32(),
+            "iroh-rn-test/path/1".into(),
+        ))
+        .unwrap();
+        assert_eq!(stopped["path"], "none");
+        assert_eq!(stopped["selected"], serde_json::Value::Null);
+
+        start(Some(vec!["iroh-rn-test/path/1".into()])).expect("endpoint should start");
+        let invalid: serde_json::Value = serde_json::from_str(&peer_path(
+            "not-a-node-id".into(),
+            "iroh-rn-test/path/1".into(),
+        ))
+        .unwrap();
+        assert_eq!(invalid["path"], "none");
+        let unknown: serde_json::Value = serde_json::from_str(&peer_path(
+            test_endpoint_id().to_z32(),
+            "iroh-rn-test/path/1".into(),
+        ))
+        .unwrap();
+        assert_eq!(unknown["path"], "none");
+        stop();
+    }
+
+    #[test]
+    fn peer_path_reports_direct_for_a_loopback_session() {
+        let _guard = test_guard();
+        const ALPN: &str = "iroh-rn-test/path/direct/1";
+        stop();
+        start(Some(vec![ALPN.to_string()])).expect("client endpoint should start");
+        let runtime = with_state(|state| Ok(state.runtime.handle().clone())).unwrap();
+        let server = runtime
+            .block_on(async {
+                Endpoint::builder(iroh::endpoint::presets::Minimal)
+                    .relay_mode(RelayMode::Disabled)
+                    .alpns(vec![ALPN.as_bytes().to_vec()])
+                    .bind_addr((std::net::Ipv4Addr::LOCALHOST, 0))
+                    .map_err(err)?
+                    .bind()
+                    .await
+                    .map_err(err)
+            })
+            .expect("server endpoint should start");
+        let hint = serde_json::json!({
+            "id": server.id().to_z32(),
+            "addrs": server.addr().addrs.iter().map(ToString::to_string).collect::<Vec<_>>(),
+        })
+        .to_string();
+        let server_task = runtime.spawn({
+            let server = server.clone();
+            async move {
+                let incoming = server.accept().await.expect("one incoming QUIC session");
+                let _connection = incoming.await.expect("QUIC handshake");
+                tokio::time::sleep(Duration::from_millis(1_500)).await;
+            }
+        });
+
+        let stream = connect(
+            server.id().to_z32(),
+            ALPN.to_string(),
+            Some(hint),
+            Some(5_000),
+        )
+        .expect("stream");
+        let report: serde_json::Value =
+            serde_json::from_str(&peer_path(server.id().to_z32(), ALPN.into())).unwrap();
+        assert_ne!(
+            report["path"], "none",
+            "a live session should report its path"
+        );
+        assert_eq!(report["selected"], "direct");
+        assert_eq!(report["relayUrl"], serde_json::Value::Null);
+
+        close(stream).unwrap();
+        runtime.block_on(server_task).expect("server task");
+        runtime.block_on(server.close());
         stop();
     }
 

@@ -498,6 +498,22 @@ function getGeneratedIrohBridge() {
         return { unavailable: true, error: error instanceof Error ? error.message : String(error) };
       }
     },
+    /**
+     * Live network path of the cached session to a peer for an ALPN: `direct`, `relay`, `mixed` or `none`.
+     * Reads the current QUIC snapshot only (never dials). Never rejects; `{ unavailable: true }` with an older runtime.
+     */
+    peerPath(options) {
+      if (typeof runtime.peerPath !== 'function') return { unavailable: true };
+      const nodeId = typeof options?.nodeId === 'string' ? options.nodeId.trim() : '';
+      const alpn = typeof options?.alpn === 'string' ? options.alpn.trim() : '';
+      if (!nodeId || !alpn) return { unavailable: true, error: 'peerPath requires nodeId and alpn' };
+      try {
+        // Synchronous on the native side; `JSON.parse` reads the JSON string it returns.
+        return JSON.parse(runtime.peerPath(nodeId, alpn));
+      } catch (error) {
+        return { unavailable: true, error: error instanceof Error ? error.message : String(error) };
+      }
+    },
     connect(options) {
       return connectStream(options);
     },
@@ -566,6 +582,9 @@ function getUnavailableIrohBridge(error) {
       throw unavailable;
     },
     async dialDiagnostics() {
+      return { unavailable: true };
+    },
+    peerPath() {
       return { unavailable: true };
     },
     async connectTarget() {
