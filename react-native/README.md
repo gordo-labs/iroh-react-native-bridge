@@ -169,26 +169,6 @@ endpoint. Safe to call when not running.
 
 Local endpoint id as **z-base-32**. Empty string if not started.
 
-#### `peerPath(options): IrohPeerPath`
-
-Network path the cached QUIC session to a peer currently uses, for the given ALPN. It reads a snapshot and never dials;
-it is synchronous and never rejects. Use it after `connectTarget` / `connect` to log whether a session is direct or
-relayed.
-
-```ts
-const path = bridge.peerPath({ nodeId: remoteNodeId, alpn: 'my-app/1' });
-// { path: 'relay', selected: 'relay', relayUrl: 'https://relay.example./', openPaths: 1 }
-```
-
-- `path`: `direct` (only IP paths open), `relay` (only relay paths), `mixed` (a direct and a relay path open at once),
-  or `none` (no live session for this peer and ALPN).
-- `selected`: the kind of path carrying application data now (`direct`, `relay`, or `null`). It can differ from `path`
-  while a hole punch is in progress.
-- `relayUrl`: relay of the selected relay path, or of any open relay path; `null` when none.
-- `openPaths`: number of open network paths on the session.
-- Returns `{ unavailable: true }` with a native runtime that predates this method, and for an invalid `nodeId` or
-  `alpn`.
-
 #### `connectTarget(options): Promise<IrohBridgeConnection>`
 
 Preferred dial API. It validates one unambiguous target and then dials (or
@@ -551,15 +531,6 @@ await bridge.stop();
 ## TypeScript surface
 
 ```ts
-type IrohPeerPath = {
-  unavailable?: boolean;
-  error?: string;
-  path?: 'direct' | 'relay' | 'mixed' | 'none';
-  selected?: 'direct' | 'relay' | null;
-  relayUrl?: string | null;
-  openPaths?: number;
-};
-
 type IrohBridgeConnection = {
   send(data: Uint8Array | number[]): Promise<void>;
   onMessage(handler: (data: Uint8Array) => void): () => void;

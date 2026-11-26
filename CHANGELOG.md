@@ -3,13 +3,6 @@
 This project follows semantic versioning after 1.0. During 0.x, minor and patch
 versions may still include API or packaging changes.
 
-## Unreleased
-
-- Added `peerPath({ nodeId, alpn })`: the live network path of the cached session to a peer (`direct`, `relay`,
-  `mixed` or `none`), the path carrying data now (`selected`), and the relay URL. It reads a QUIC snapshot, never dials,
-  never rejects. Needs the native libraries rebuilt (`npm run ubrn:ios`, `npm run ubrn:android`): the generated bindings
-  add a new UniFFI export and checksum.
-
 ## 0.3.0 (2026-10-11)
 
 Source release on `main`. npm still serves `0.2.0` until the `Publish npm package` workflow runs

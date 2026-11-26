@@ -235,34 +235,6 @@ export function nodeId(): string {
     }
 
 /**
- * Network path of the cached QUIC session to `node_id` for `alpn`, as a JSON string (never an error).
- *
- * `path` is what the session has open right now: `direct` (IP paths only), `relay` (relay paths only),
- * `mixed` (a direct and a relay path are open at once) or `none` (no live session for this peer and ALPN).
- * `selected` is the kind of path QUIC currently sends application data on (`direct`, `relay`, or null).
- * `relayUrl` is the relay of the selected relay path, or of any open relay path, when one exists.
- *
- * Synchronous and non-blocking: it reads a snapshot from the QUIC connection and never dials.
- */
-export function peerPath(nodeId: string, alpn: string): string {
-    return ((__rb: Uint8Array) => {
-        try {
-            return FfiConverterString.lift(__rb);
-        } finally {
-            nativeModule().rustbuffer_free(__rb);
-        }
-    })(uniffiCaller.rustCall(
-            /*caller:*/ (callStatus) => {
-                return nativeModule().ubrn_uniffi_iroh_mobile_bridge_fn_func_peer_path(
-        FfiConverterString.lower(nodeId, nativeModule().rustbuffer_alloc),
-        FfiConverterString.lower(alpn, nativeModule().rustbuffer_alloc),
-                callStatus);
-            },
-            /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
-    ));
-    }
-
-/**
  * Send one framed payload on an open connection.
  */
 export function send(connectionId: string, data: ArrayBuffer): void /*throws*/ {uniffiCaller.rustCallWithError(
@@ -1149,9 +1121,6 @@ function uniffiEnsureInitialized() {
     }
     if (nativeModule().ubrn_uniffi_iroh_mobile_bridge_checksum_func_node_id() !== 22079) {
         throw new UniffiInternalError.ApiChecksumMismatch("uniffi_iroh_mobile_bridge_checksum_func_node_id");
-    }
-    if (nativeModule().ubrn_uniffi_iroh_mobile_bridge_checksum_func_peer_path() !== 12832) {
-        throw new UniffiInternalError.ApiChecksumMismatch("uniffi_iroh_mobile_bridge_checksum_func_peer_path");
     }
     if (nativeModule().ubrn_uniffi_iroh_mobile_bridge_checksum_func_send() !== 17431) {
         throw new UniffiInternalError.ApiChecksumMismatch("uniffi_iroh_mobile_bridge_checksum_func_send");

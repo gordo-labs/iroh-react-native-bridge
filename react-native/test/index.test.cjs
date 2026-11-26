@@ -310,25 +310,3 @@ test('dialDiagnostics parses the native report and never rejects', async () => {
   const failed = await bridge.dialDiagnostics();
   assert.equal(failed.unavailable, true);
 });
-
-test('peerPath parses the native snapshot and never rejects', async () => {
-  const { bridge, runtime } = loadBridgeRuntime();
-  // Native runtime that predates the call.
-  assert.deepEqual(await bridge.peerPath({ nodeId: 'peer', alpn: 'my-app/1' }), { unavailable: true });
-
-  const calls = [];
-  runtime.peerPath = (nodeId, alpn) => {
-    calls.push([nodeId, alpn]);
-    return JSON.stringify({ path: 'mixed', selected: 'relay', relayUrl: 'https://relay.example./', openPaths: 2 });
-  };
-  const report = await bridge.peerPath({ nodeId: ' peer ', alpn: ' my-app/1 ' });
-  assert.deepEqual(calls, [['peer', 'my-app/1']]);
-  assert.equal(report.path, 'mixed');
-  assert.equal(report.selected, 'relay');
-
-  assert.equal((await bridge.peerPath({ nodeId: '', alpn: 'x' })).unavailable, true);
-  assert.equal(calls.length, 1, 'invalid input never reaches the native call');
-
-  runtime.peerPath = () => { throw new Error('boom'); };
-  assert.equal((await bridge.peerPath({ nodeId: 'peer', alpn: 'x' })).unavailable, true);
-});

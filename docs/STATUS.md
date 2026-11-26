@@ -27,7 +27,6 @@ yet a stable general-purpose React Native Iroh SDK.
 | Dial remote endpoint by node id plus address hint | Implemented |
 | Typed dial target: official endpoint ticket | Implemented (unreleased) |
 | Typed dial target: explicit direct + relay addresses | Implemented (unreleased) |
-| Live session network path (`peerPath`: direct / relay / mixed / none) | Implemented (unreleased) |
 | Stable JavaScript error codes | Implemented (unreleased) |
 | Send/receive framed binary messages | Implemented |
 | Multiple independent streams on one QUIC session | Implemented (`0.2.0`) |

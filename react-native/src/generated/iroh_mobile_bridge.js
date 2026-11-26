@@ -35,7 +35,6 @@ __export(iroh_mobile_bridge_exports, {
   isStreamOpen: () => isStreamOpen,
   nextMessage: () => nextMessage,
   nodeId: () => nodeId,
-  peerPath: () => peerPath,
   send: () => send,
   start: () => start,
   startTcpForwarder: () => startTcpForwarder,
@@ -258,26 +257,6 @@ function nodeId() {
     /*caller:*/
     (callStatus) => {
       return iroh_mobile_bridge_ffi_default().ubrn_uniffi_iroh_mobile_bridge_fn_func_node_id(
-        callStatus
-      );
-    },
-    /*liftString:*/
-    FfiConverterString.lift.bind(FfiConverterString)
-  ));
-}
-function peerPath(nodeId2, alpn) {
-  return ((__rb) => {
-    try {
-      return FfiConverterString.lift(__rb);
-    } finally {
-      iroh_mobile_bridge_ffi_default().rustbuffer_free(__rb);
-    }
-  })(uniffiCaller.rustCall(
-    /*caller:*/
-    (callStatus) => {
-      return iroh_mobile_bridge_ffi_default().ubrn_uniffi_iroh_mobile_bridge_fn_func_peer_path(
-        FfiConverterString.lower(nodeId2, iroh_mobile_bridge_ffi_default().rustbuffer_alloc),
-        FfiConverterString.lower(alpn, iroh_mobile_bridge_ffi_default().rustbuffer_alloc),
         callStatus
       );
     },
@@ -956,9 +935,6 @@ function uniffiEnsureInitialized() {
   if (iroh_mobile_bridge_ffi_default().ubrn_uniffi_iroh_mobile_bridge_checksum_func_node_id() !== 22079) {
     throw new import_core.UniffiInternalError.ApiChecksumMismatch("uniffi_iroh_mobile_bridge_checksum_func_node_id");
   }
-  if (iroh_mobile_bridge_ffi_default().ubrn_uniffi_iroh_mobile_bridge_checksum_func_peer_path() !== 12832) {
-    throw new import_core.UniffiInternalError.ApiChecksumMismatch("uniffi_iroh_mobile_bridge_checksum_func_peer_path");
-  }
   if (iroh_mobile_bridge_ffi_default().ubrn_uniffi_iroh_mobile_bridge_checksum_func_send() !== 17431) {
     throw new import_core.UniffiInternalError.ApiChecksumMismatch("uniffi_iroh_mobile_bridge_checksum_func_send");
   }
@@ -1004,7 +980,6 @@ var iroh_mobile_bridge_default = Object.freeze({
   isStreamOpen,
   nextMessage,
   nodeId,
-  peerPath,
   send,
   start,
   startTcpForwarder,
